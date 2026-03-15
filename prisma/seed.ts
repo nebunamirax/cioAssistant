@@ -1,4 +1,5 @@
-import { PrismaClient, ActionStatus, Priority, ProjectStatus, ProjectType } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
+import { ACTION_STATUSES, PRIORITIES, PROJECT_STATUSES, PROJECT_TYPES } from "@/lib/domain/constants";
 
 const prisma = new PrismaClient();
 
@@ -9,17 +10,17 @@ async function main() {
     create: {
       id: "seed-project-1",
       title: "MVP Assistant DSI",
-      type: ProjectType.DEPLOYMENT,
-      status: ProjectStatus.ACTIVE,
-      priority: Priority.HIGH
+      type: PROJECT_TYPES[1],
+      status: PROJECT_STATUSES[1],
+      priority: PRIORITIES[2]
     }
   });
 
   await prisma.action.create({
     data: {
       title: "Initialiser le backlog MVP",
-      status: ActionStatus.TODO,
-      priority: Priority.HIGH,
+      status: ACTION_STATUSES[0],
+      priority: PRIORITIES[2],
       projectId: project.id
     }
   });

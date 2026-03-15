@@ -7,70 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum Priority {
-  LOW
-  NORMAL
-  HIGH
-  CRITICAL
-}
-
-enum ActionStatus {
-  TODO
-  IN_PROGRESS
-  BLOCKED
-  WAITING
-  DONE
-}
-
-enum ProjectType {
-  DEVELOPMENT
-  DEPLOYMENT
-  MIGRATION
-  TRANSFORMATION
-  SUPPORT
-  INFRASTRUCTURE
-}
-
-enum ProjectStatus {
-  DRAFT
-  ACTIVE
-  ON_HOLD
-  COMPLETED
-  CANCELLED
-}
-
-enum ContractStatus {
-  DRAFT
-  ACTIVE
-  EXPIRED
-  TERMINATED
-}
-
-enum RenewalType {
-  AUTO
-  MANUAL
-  NONE
-}
-
-enum CommunicationStatus {
-  DRAFT
-  READY
-  SENT
-  ARCHIVED
-}
-
-enum AIProviderMode {
-  LOCAL
-  EXTERNAL
-}
-
-enum AIJobStatus {
-  PENDING
-  RUNNING
-  DONE
-  FAILED
-}
-
 model User {
   id        String    @id @default(cuid())
   name      String
@@ -84,9 +20,9 @@ model Project {
   id            String         @id @default(cuid())
   title         String
   description   String?
-  type          ProjectType
-  status        ProjectStatus  @default(DRAFT)
-  priority      Priority       @default(NORMAL)
+  type          String
+  status        String         @default("DRAFT")
+  priority      String         @default("NORMAL")
   ownerId       String?
   owner         User?          @relation(fields: [ownerId], references: [id])
   startDate     DateTime?
@@ -105,8 +41,8 @@ model Action {
   id            String       @id @default(cuid())
   title         String
   description   String?
-  status        ActionStatus @default(TODO)
-  priority      Priority     @default(NORMAL)
+  status        String       @default("TODO")
+  priority      String       @default("NORMAL")
   dueDate       DateTime?
   projectId     String?
   contractId    String?
@@ -144,13 +80,13 @@ model Contract {
   projectId        String?
   title            String
   contractType     String?
-  status           ContractStatus  @default(DRAFT)
+  status           String          @default("DRAFT")
   startDate        DateTime?
   endDate          DateTime?
   noticePeriodDays Int?
   amountPlanned    Float?
   notes            String?
-  renewalType      RenewalType     @default(NONE)
+  renewalType      String          @default("NONE")
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
   vendor           Vendor          @relation(fields: [vendorId], references: [id])
@@ -198,7 +134,7 @@ model Communication {
   id              String              @id @default(cuid())
   title           String
   type            String?
-  status          CommunicationStatus @default(DRAFT)
+  status          String              @default("DRAFT")
   contentText     String?
   contentMarkdown String?
   projectId       String?
@@ -248,12 +184,12 @@ model AIJob {
   id             String         @id @default(cuid())
   sourceType     String
   sourceEntityId String
-  providerMode   AIProviderMode
+  providerMode   String
   providerName   String
   taskType       String
   inputText      String
   outputJson     String?
-  status         AIJobStatus    @default(PENDING)
+  status         String         @default("PENDING")
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 }

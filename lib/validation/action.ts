@@ -1,11 +1,11 @@
-import { ActionStatus, Priority } from "@prisma/client";
+import { ACTION_STATUSES, PRIORITIES } from "@/lib/domain/constants";
 import { z } from "zod";
 
 export const actionSchema = z.object({
   title: z.string().min(3),
   description: z.string().optional(),
-  status: z.nativeEnum(ActionStatus).default(ActionStatus.TODO),
-  priority: z.nativeEnum(Priority).default(Priority.NORMAL),
+  status: z.enum(ACTION_STATUSES).default("TODO"),
+  priority: z.enum(PRIORITIES).default("NORMAL"),
   dueDate: z.string().datetime().optional().nullable(),
   projectId: z.string().optional().nullable(),
   contractId: z.string().optional().nullable(),

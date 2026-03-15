@@ -1,15 +1,13 @@
 "use client";
 
 import { useState } from "react";
-
-const priorities = ["LOW", "NORMAL", "HIGH", "CRITICAL"] as const;
-const statuses = ["TODO", "IN_PROGRESS", "BLOCKED", "WAITING", "DONE"] as const;
+import { ACTION_STATUSES, PRIORITIES } from "@/lib/domain/constants";
 
 export function ActionForm() {
   const [loading, setLoading] = useState(false);
   const [title, setTitle] = useState("");
-  const [status, setStatus] = useState<(typeof statuses)[number]>("TODO");
-  const [priority, setPriority] = useState<(typeof priorities)[number]>("NORMAL");
+  const [status, setStatus] = useState<(typeof ACTION_STATUSES)[number]>("TODO");
+  const [priority, setPriority] = useState<(typeof PRIORITIES)[number]>("NORMAL");
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,13 +33,13 @@ export function ActionForm() {
         className="w-full rounded border border-slate-300 px-3 py-2"
       />
       <div className="grid gap-3 md:grid-cols-2">
-        <select value={status} onChange={(e) => setStatus(e.target.value as (typeof statuses)[number])} className="rounded border border-slate-300 px-3 py-2">
-          {statuses.map((s) => (
+        <select value={status} onChange={(e) => setStatus(e.target.value as (typeof ACTION_STATUSES)[number])} className="rounded border border-slate-300 px-3 py-2">
+          {ACTION_STATUSES.map((s) => (
             <option key={s} value={s}>{s}</option>
           ))}
         </select>
-        <select value={priority} onChange={(e) => setPriority(e.target.value as (typeof priorities)[number])} className="rounded border border-slate-300 px-3 py-2">
-          {priorities.map((p) => (
+        <select value={priority} onChange={(e) => setPriority(e.target.value as (typeof PRIORITIES)[number])} className="rounded border border-slate-300 px-3 py-2">
+          {PRIORITIES.map((p) => (
             <option key={p} value={p}>{p}</option>
           ))}
         </select>

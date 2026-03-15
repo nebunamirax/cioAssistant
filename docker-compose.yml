@@ -1,0 +1,32 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: "file:./prisma/dev.db"
+      AI_PROVIDER_MODE: "local"
+      AI_EXTERNAL_BASE_URL: ""
+    command: sh -lc "npx prisma db push && npm run dev"
+
+  verify:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: "file:./prisma/dev.db"
+      AI_PROVIDER_MODE: "local"
+      AI_EXTERNAL_BASE_URL: ""
+    command: sh -lc "npm run test:run && npx prisma db push && npm run lint && npm run build"
+
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: "file:./prisma/dev.db"
+      AI_PROVIDER_MODE: "local"
+      AI_EXTERNAL_BASE_URL: ""
+    command: npm run test:run

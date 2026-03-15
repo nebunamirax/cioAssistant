@@ -100,3 +100,24 @@ npx prisma generate
 npx prisma migrate dev --name init
 npm run dev
 ```
+
+## Docker
+Pour vérifier le projet sans installer Node sur la machine hôte :
+
+```bash
+docker compose run --rm verify
+```
+
+Pour lancer uniquement les tests :
+
+```bash
+docker compose run --rm test
+```
+
+Pour lancer l'application localement dans Docker :
+
+```bash
+docker compose up app
+```
+
+La commande initialise aussi le schema Prisma SQLite dans le conteneur avant l'execution.

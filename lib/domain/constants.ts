@@ -1,0 +1,19 @@
+export const PRIORITIES = ["LOW", "NORMAL", "HIGH", "CRITICAL"] as const;
+export const ACTION_STATUSES = ["TODO", "IN_PROGRESS", "BLOCKED", "WAITING", "DONE"] as const;
+export const PROJECT_TYPES = ["DEVELOPMENT", "DEPLOYMENT", "MIGRATION", "TRANSFORMATION", "SUPPORT", "INFRASTRUCTURE"] as const;
+export const PROJECT_STATUSES = ["DRAFT", "ACTIVE", "ON_HOLD", "COMPLETED", "CANCELLED"] as const;
+export const CONTRACT_STATUSES = ["DRAFT", "ACTIVE", "EXPIRED", "TERMINATED"] as const;
+export const RENEWAL_TYPES = ["AUTO", "MANUAL", "NONE"] as const;
+export const COMMUNICATION_STATUSES = ["DRAFT", "READY", "SENT", "ARCHIVED"] as const;
+export const AI_PROVIDER_MODES = ["LOCAL", "EXTERNAL"] as const;
+export const AI_JOB_STATUSES = ["PENDING", "RUNNING", "DONE", "FAILED"] as const;
+
+export type Priority = (typeof PRIORITIES)[number];
+export type ActionStatus = (typeof ACTION_STATUSES)[number];
+export type ProjectType = (typeof PROJECT_TYPES)[number];
+export type ProjectStatus = (typeof PROJECT_STATUSES)[number];
+export type ContractStatus = (typeof CONTRACT_STATUSES)[number];
+export type RenewalType = (typeof RENEWAL_TYPES)[number];
+export type CommunicationStatus = (typeof COMMUNICATION_STATUSES)[number];
+export type AIProviderMode = (typeof AI_PROVIDER_MODES)[number];
+export type AIJobStatus = (typeof AI_JOB_STATUSES)[number];
