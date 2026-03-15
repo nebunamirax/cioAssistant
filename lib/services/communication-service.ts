@@ -85,7 +85,7 @@ async function buildCommunicationCreateDataAsync(input: CommunicationInput): Pro
   const generated = await enrichGeneratedContent(input);
 
   return {
-    title: generated.title,
+    title: generated.title ?? input.title,
     ...(generated.type !== undefined ? { type: normalizeOptionalString(generated.type) } : {}),
     status: input.status,
     ...(generated.templateKey !== undefined ? { templateKey: normalizeOptionalString(generated.templateKey) } : {}),
@@ -102,7 +102,7 @@ async function buildCommunicationUpdateDataAsync(input: CommunicationUpdateInput
   const generated = await enrichGeneratedContent(input);
 
   return {
-    ...(input.title !== undefined || generated.templateKey !== undefined ? { title: generated.title } : {}),
+    ...(input.title !== undefined || generated.templateKey !== undefined ? { title: generated.title ?? input.title ?? "" } : {}),
     ...(input.type !== undefined || generated.templateKey !== undefined ? { type: normalizeOptionalString(generated.type) } : {}),
     ...(input.status !== undefined ? { status: input.status } : {}),
     ...(input.templateKey !== undefined ? { templateKey: normalizeOptionalString(generated.templateKey) } : {}),

@@ -26,6 +26,11 @@
 4. Service persiste via Prisma.
 5. API retourne JSON normalisé.
 
+## Paramètres applicatifs
+- Les paramètres UI sont regroupés dans `/settings`.
+- Les réglages persistants non métier sont stockés localement dans un fichier JSON applicatif.
+- La configuration IA runtime fusionne d’abord les réglages persistés, puis les variables d’environnement comme fallback.
+
 ## Module Actions
 - Liste serveur avec filtres `search`, `status`, `priority` et `overdueOnly`.
 - `/actions` fonctionne comme un cockpit opérationnel: liste, édition et contexte cohabitent pour limiter la navigation.

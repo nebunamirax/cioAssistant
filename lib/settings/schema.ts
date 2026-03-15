@@ -1,0 +1,28 @@
+import { z } from "zod";
+
+export const appSettingsSchema = z.object({
+  ai: z.object({
+    providerMode: z.enum(["local", "openai", "compatible"]).default("local"),
+    localModel: z.string().default("heuristic-v1"),
+    localModels: z.string().default("heuristic-v1"),
+    openAIApiKey: z.string().default(""),
+    openAIModel: z.string().default(""),
+    openAIModels: z.string().default(""),
+    compatibleBaseUrl: z.string().default(""),
+    compatibleApiKey: z.string().default(""),
+    compatibleModel: z.string().default(""),
+    compatibleModels: z.string().default("")
+  }).default({}),
+  integrations: z.object({
+    outlookEnabled: z.boolean().default(false),
+    outlookTenantId: z.string().default(""),
+    outlookClientId: z.string().default(""),
+    notionEnabled: z.boolean().default(false),
+    notionApiKey: z.string().default(""),
+    notionDatabaseId: z.string().default("")
+  }).default({})
+});
+
+export const appSettingsUpdateSchema = appSettingsSchema;
+
+export type AppSettings = z.infer<typeof appSettingsSchema>;

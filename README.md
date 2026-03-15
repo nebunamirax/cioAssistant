@@ -99,6 +99,7 @@ docs/
 - `POST /api/ai/extract`
 - `POST /api/ai/classify`
 - `POST /api/ai/suggest-project`
+- `POST /api/ai/intake`
 - `GET /api/integrations/outlook`
 - `GET /api/integrations/notion`
 - `GET /api/integrations/ai`
@@ -106,10 +107,18 @@ docs/
 ## Couche IA (abstraction)
 - `lib/ai/types.ts`: interface `AIProvider`
 - `lib/ai/providers/local-provider.ts`
-- `lib/ai/providers/external-provider.ts`
+- `lib/ai/providers/openai-provider.ts`
+- `lib/ai/providers/compatible-provider.ts`
 - `lib/ai/provider-factory.ts`
 
-Les suggestions IA restent non bloquantes et validées manuellement.
+## Ingestion IA dashboard
+- La page principale expose une zone de capture pour coller du texte ou charger un document texte.
+- Le flux `POST /api/ai/intake` analyse le contenu puis crée directement des entrées dans le ou les bons modules (`Actions`, `Projets`, `Prestataires`, `Contrats`, `Budget`, `Communications`).
+- Les liaisons connues sont appliquées automatiquement quand elles peuvent être inférées.
+- En cas d’analyse pauvre, le fallback crée au minimum une action pour éviter la perte d’information.
+- Les documents `PDF` et `DOCX` sont acceptés et convertis en texte côté serveur avant routage.
+- Le provider peut être `local`, `openai` ou `compatible`, avec sélection explicite du modèle via variables d’environnement.
+- Les paramètres applicatifs sont aussi modifiables depuis l’UI unifiée `/settings`, avec persistance locale dans un fichier JSON.
 
 ## Démarrage
 ```bash

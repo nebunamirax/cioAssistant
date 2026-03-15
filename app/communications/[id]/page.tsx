@@ -20,6 +20,7 @@ export default async function CommunicationDetailPage({ params }: { params: { id
   const status = COMMUNICATION_STATUSES.includes(communication.status as (typeof COMMUNICATION_STATUSES)[number])
     ? (communication.status as (typeof COMMUNICATION_STATUSES)[number])
     : "DRAFT";
+  const templateKey = getCommunicationTemplate(communication.templateKey)?.key ?? "";
   const projectOptions = projects.map((project) => ({ id: project.id, label: project.title }));
   const actionOptions = actions.map((action) => ({ id: action.id, label: action.title }));
   const contractOptions = contracts.map((contract) => ({ id: contract.id, label: contract.title }));
@@ -47,7 +48,7 @@ export default async function CommunicationDetailPage({ params }: { params: { id
             title: communication.title,
             type: communication.type ?? "",
             status,
-            templateKey: communication.templateKey ?? "",
+            templateKey,
             templateInputData: communication.templateInputData ?? {},
             contentText: communication.contentText ?? "",
             contentMarkdown: communication.contentMarkdown ?? "",

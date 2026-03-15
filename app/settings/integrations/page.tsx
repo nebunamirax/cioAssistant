@@ -1,3 +1,5 @@
-export default function IntegrationSettingsPage() {
-  return <div className="text-slate-700">Paramètres des intégrations (Outlook/Notion) à configurer.</div>;
+import { redirect } from "next/navigation";
+
+export default function DeprecatedIntegrationSettingsPage() {
+  redirect("/settings");
 }

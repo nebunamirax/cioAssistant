@@ -275,7 +275,7 @@ export function CommunicationForm({
             </select>
           </div>
           <div className="workbench-section text-sm text-slate-600">
-            Les templates remplissent automatiquement le titre et le contenu. Toute modification manuelle coupe cette génération jusqu'à régénération.
+            Les templates remplissent automatiquement le titre et le contenu. Toute modification manuelle coupe cette génération jusqu&apos;à régénération.
           </div>
         </div>
         <div className="grid gap-3 md:grid-cols-3">

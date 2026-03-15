@@ -10,8 +10,7 @@ const links = [
   ["Communications", "/communications"],
   ["Réunions", "/meetings"],
   ["Emails", "/emails"],
-  ["IA / Paramètres", "/settings/ai"],
-  ["Paramètres", "/settings/integrations"]
+  ["Paramètres", "/settings"]
 ] as const;
 
 export function Sidebar() {
