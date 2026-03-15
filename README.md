@@ -54,8 +54,11 @@ docs/
 - `/actions`
 - `/actions/[id]`
 - `/projects`
+- `/projects/[id]`
 - `/contracts`
+- `/contracts/[id]`
 - `/vendors`
+- `/vendors/[id]`
 - `/budget`
 - `/communications`
 - `/meetings`
@@ -66,9 +69,12 @@ docs/
 ## Endpoints API
 - `GET|POST /api/actions`
 - `GET|PATCH|DELETE /api/actions/[id]`
-- `GET /api/projects`
-- `GET /api/vendors`
-- `GET /api/contracts`
+- `GET|POST /api/projects`
+- `GET|PATCH|DELETE /api/projects/[id]`
+- `GET|POST /api/vendors`
+- `GET|PATCH|DELETE /api/vendors/[id]`
+- `GET|POST /api/contracts`
+- `GET|PATCH|DELETE /api/contracts/[id]`
 - `GET /api/support-services`
 - `GET /api/budget-items`
 - `GET /api/communications`
@@ -119,6 +125,24 @@ Pour valider uniquement la feature `Actions` dans le conteneur :
 
 ```bash
 docker compose run --rm --entrypoint sh test -lc "npm run test:run -- tests/action-schema.test.ts tests/action-service.test.ts"
+```
+
+Pour valider uniquement la feature `Projets` dans le conteneur :
+
+```bash
+docker compose run --rm --entrypoint sh test -lc "npm run test:run -- tests/project-schema.test.ts tests/project-service.test.ts"
+```
+
+Pour valider uniquement la feature `Contrats` dans le conteneur :
+
+```bash
+docker compose run --rm --entrypoint sh test -lc "npm run test:run -- tests/contract-schema.test.ts tests/contract-service.test.ts"
+```
+
+Pour valider uniquement la feature `Prestataires` dans le conteneur :
+
+```bash
+docker compose run --rm --entrypoint sh test -lc "npm run test:run -- tests/vendor-schema.test.ts tests/vendor-service.test.ts"
 ```
 
 Pour lancer l'application localement dans Docker :

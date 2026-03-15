@@ -4,10 +4,10 @@
 |---|---|---|---|
 | Dashboard | Vue synthèse des priorités et alertes | implemented (minimal) | Prisma |
 | Actions | CRUD complet, filtres statut/priorité/retard, vue détail, édition et suppression | implemented | Prisma, Zod |
-| Projets | Liste et fiches projet | planned | Prisma, Zod |
+| Projets | CRUD complet, filtres de base, fiche détail et aperçu des liens métier | implemented | Prisma, Zod |
 | Réunions | Comptes-rendus + extraction | planned | Prisma, IA |
-| Prestataires | Gestion fournisseurs | planned | Prisma, Zod |
-| Contrats | Gestion contrats et échéances | planned | Prisma, Zod |
+| Prestataires | CRUD complet, filtres de base, fiche détail et vue des liens métier | implemented | Prisma, Zod |
+| Contrats | CRUD complet, filtres statut/renouvellement/échéance et fiche détail | implemented | Prisma, Zod |
 | Budget | Lignes budgétaires + synthèse | planned | Prisma, CSV |
 | Communications | Brouillons + export | planned | Prisma |
 | Outlook | Intégration Microsoft Graph | planned | OAuth Microsoft |

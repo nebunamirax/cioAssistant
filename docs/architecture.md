@@ -29,6 +29,24 @@
 - Suppression via `DELETE /api/actions/[id]`.
 - Le service `lib/services/action-service.ts` centralise la normalisation des champs optionnels et la gestion de `completedAt`.
 
+## Module Projets
+- Liste serveur avec filtres `search`, `type`, `status` et `priority`.
+- Détail projet sur `/projects/[id]` avec édition via `PATCH /api/projects/[id]`.
+- Suppression via `DELETE /api/projects/[id]`.
+- Le service `lib/services/project-service.ts` centralise les filtres, la normalisation des champs optionnels et le chargement des relations métier principales.
+
+## Module Contrats
+- Liste serveur avec filtres `search`, `status`, `renewalType` et `expiringOnly`.
+- Détail contrat sur `/contracts/[id]` avec édition via `PATCH /api/contracts/[id]`.
+- Suppression via `DELETE /api/contracts/[id]`.
+- Le service `lib/services/contract-service.ts` centralise les échéances de contrat, la normalisation des champs optionnels et le chargement des relations principales.
+
+## Module Prestataires
+- Liste serveur avec filtres `search` et `category`.
+- Détail prestataire sur `/vendors/[id]` avec édition via `PATCH /api/vendors/[id]`.
+- Suppression via `DELETE /api/vendors/[id]`.
+- Le service `lib/services/vendor-service.ts` centralise la normalisation des contacts et le chargement des contrats/actions/services liés.
+
 ## Validation et exécution
 - L'environnement de vérification cible passe par Docker Compose.
 - `docker compose run --rm test` lance Vitest dans le conteneur.
