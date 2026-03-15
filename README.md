@@ -60,6 +60,7 @@ docs/
 - `/vendors`
 - `/vendors/[id]`
 - `/budget`
+- `/budget/[id]`
 - `/communications`
 - `/meetings`
 - `/emails`
@@ -76,7 +77,8 @@ docs/
 - `GET|POST /api/contracts`
 - `GET|PATCH|DELETE /api/contracts/[id]`
 - `GET /api/support-services`
-- `GET /api/budget-items`
+- `GET|POST /api/budget-items`
+- `GET|PATCH|DELETE /api/budget-items/[id]`
 - `GET /api/communications`
 - `GET /api/meeting-notes`
 - `GET /api/emails`
@@ -143,6 +145,12 @@ Pour valider uniquement la feature `Prestataires` dans le conteneur :
 
 ```bash
 docker compose run --rm --entrypoint sh test -lc "npm run test:run -- tests/vendor-schema.test.ts tests/vendor-service.test.ts"
+```
+
+Pour valider uniquement la feature `Budget` dans le conteneur :
+
+```bash
+docker compose run --rm --entrypoint sh test -lc "npm run test:run -- tests/budget-item-schema.test.ts tests/budget-item-service.test.ts"
 ```
 
 Pour lancer l'application localement dans Docker :

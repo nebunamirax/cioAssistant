@@ -47,6 +47,12 @@
 - Suppression via `DELETE /api/vendors/[id]`.
 - Le service `lib/services/vendor-service.ts` centralise la normalisation des contacts et le chargement des contrats/actions/services liés.
 
+## Module Budget
+- Liste serveur avec filtres `search`, `category` et `fiscalYear`.
+- Détail d'une ligne budgétaire sur `/budget/[id]` avec édition via `PATCH /api/budget-items/[id]`.
+- Suppression via `DELETE /api/budget-items/[id]`.
+- Le service `lib/services/budget-item-service.ts` centralise les montants budgétaires, les rattachements projet/contrat/prestataire et la normalisation des champs optionnels.
+
 ## Validation et exécution
 - L'environnement de vérification cible passe par Docker Compose.
 - `docker compose run --rm test` lance Vitest dans le conteneur.
