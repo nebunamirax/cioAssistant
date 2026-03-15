@@ -22,6 +22,11 @@
 - `MeetingNote` lié à `Project` (optionnel).
 - `Communication` lié à `Project`, `Action`, `Contract` (optionnel).
 
+## Focus Communication
+- `Communication.templateKey` identifie un modèle de communication métier.
+- `Communication.inputDataJson` stocke les inputs saisis pour générer le contenu.
+- Le contenu généré reste modifiable manuellement après génération.
+
 ## Contraintes
 - Un contrat doit avoir un `vendorId`.
 - Une action peut exister sans projet.

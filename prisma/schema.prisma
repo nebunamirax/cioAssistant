@@ -135,6 +135,8 @@ model Communication {
   title           String
   type            String?
   status          String              @default("DRAFT")
+  templateKey     String?
+  inputDataJson   String?
   contentText     String?
   contentMarkdown String?
   projectId       String?

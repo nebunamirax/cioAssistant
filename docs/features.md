@@ -9,7 +9,7 @@
 | Prestataires | CRUD complet, filtres de base, fiche détail et vue des liens métier | implemented | Prisma, Zod |
 | Contrats | CRUD complet, filtres statut/renouvellement/échéance et fiche détail | implemented | Prisma, Zod |
 | Budget | CRUD lignes budgétaires, filtres de base, rattachements métier et synthèse d'écart | implemented | Prisma, CSV |
-| Communications | Brouillons + export | planned | Prisma |
+| Communications | Brouillons + export + templates de communication a inputs structures | implemented | Prisma |
 | Outlook | Intégration Microsoft Graph | planned | OAuth Microsoft |
 | Notion | Import/export optionnel | planned | Notion API |
 | IA transverse | Résumé, extraction, suggestion projet | partial (architecture) | Provider IA |

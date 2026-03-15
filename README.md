@@ -1,6 +1,6 @@
 # CIO Assistant
 
-Application web locale (MVP mono-utilisateur) pour piloter actions, projets, contrats, budget et communications.
+Application web locale (MVP mono-utilisateur) pour piloter actions, projets, contrats, budget et communications templatisées.
 
 ## Stack
 - Next.js App Router + TypeScript
@@ -62,6 +62,7 @@ docs/
 - `/budget`
 - `/budget/[id]`
 - `/communications`
+- `/communications/[id]`
 - `/meetings`
 - `/emails`
 - `/settings/integrations`
@@ -79,7 +80,8 @@ docs/
 - `GET /api/support-services`
 - `GET|POST /api/budget-items`
 - `GET|PATCH|DELETE /api/budget-items/[id]`
-- `GET /api/communications`
+- `GET|POST /api/communications`
+- `GET|PATCH|DELETE /api/communications/[id]`
 - `GET /api/meeting-notes`
 - `GET /api/emails`
 - `POST /api/import/csv`

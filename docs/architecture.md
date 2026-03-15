@@ -53,6 +53,14 @@
 - Suppression via `DELETE /api/budget-items/[id]`.
 - Le service `lib/services/budget-item-service.ts` centralise les montants budgétaires, les rattachements projet/contrat/prestataire et la normalisation des champs optionnels.
 
+## Module Communications
+- Liste serveur avec filtres `search`, `status`, `type`, `projectId`, `actionId` et `contractId`.
+- Détail de communication sur `/communications/[id]` avec édition via `PATCH /api/communications/[id]`.
+- Suppression via `DELETE /api/communications/[id]`.
+- Export Markdown unitaire ou global via `GET /api/export/markdown`.
+- Templates métiers disponibles: post mortem, synthèse d'avancement projet, suivi codir.
+- Le service `lib/services/communication-service.ts` centralise les filtres, les rattachements projet/action/contrat, la persistance des inputs structurés et la génération automatique du contenu.
+
 ## Validation et exécution
 - L'environnement de vérification cible passe par Docker Compose.
 - `docker compose run --rm test` lance Vitest dans le conteneur.
