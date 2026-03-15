@@ -1,0 +1,269 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Priority {
+  LOW
+  NORMAL
+  HIGH
+  CRITICAL
+}
+
+enum ActionStatus {
+  TODO
+  IN_PROGRESS
+  BLOCKED
+  WAITING
+  DONE
+}
+
+enum ProjectType {
+  DEVELOPMENT
+  DEPLOYMENT
+  MIGRATION
+  TRANSFORMATION
+  SUPPORT
+  INFRASTRUCTURE
+}
+
+enum ProjectStatus {
+  DRAFT
+  ACTIVE
+  ON_HOLD
+  COMPLETED
+  CANCELLED
+}
+
+enum ContractStatus {
+  DRAFT
+  ACTIVE
+  EXPIRED
+  TERMINATED
+}
+
+enum RenewalType {
+  AUTO
+  MANUAL
+  NONE
+}
+
+enum CommunicationStatus {
+  DRAFT
+  READY
+  SENT
+  ARCHIVED
+}
+
+enum AIProviderMode {
+  LOCAL
+  EXTERNAL
+}
+
+enum AIJobStatus {
+  PENDING
+  RUNNING
+  DONE
+  FAILED
+}
+
+model User {
+  id        String    @id @default(cuid())
+  name      String
+  email     String    @unique
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  projects  Project[]
+}
+
+model Project {
+  id            String         @id @default(cuid())
+  title         String
+  description   String?
+  type          ProjectType
+  status        ProjectStatus  @default(DRAFT)
+  priority      Priority       @default(NORMAL)
+  ownerId       String?
+  owner         User?          @relation(fields: [ownerId], references: [id])
+  startDate     DateTime?
+  targetDate    DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  actions       Action[]
+  contracts     Contract[]
+  budgetItems   BudgetItem[]
+  communications Communication[]
+  meetingNotes  MeetingNote[]
+  emails       Email[]
+}
+
+model Action {
+  id            String       @id @default(cuid())
+  title         String
+  description   String?
+  status        ActionStatus @default(TODO)
+  priority      Priority     @default(NORMAL)
+  dueDate       DateTime?
+  projectId     String?
+  contractId    String?
+  vendorId      String?
+  sourceType    String?
+  sourceRef     String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  completedAt   DateTime?
+  project       Project?     @relation(fields: [projectId], references: [id])
+  contract      Contract?    @relation(fields: [contractId], references: [id])
+  vendor        Vendor?      @relation(fields: [vendorId], references: [id])
+  communications Communication[]
+  emails        Email[]
+}
+
+model Vendor {
+  id               String           @id @default(cuid())
+  name             String
+  category         String?
+  mainContactName  String?
+  mainContactEmail String?
+  notes            String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  contracts        Contract[]
+  supportServices  SupportService[]
+  budgetItems      BudgetItem[]
+  actions          Action[]
+}
+
+model Contract {
+  id               String          @id @default(cuid())
+  vendorId         String
+  projectId        String?
+  title            String
+  contractType     String?
+  status           ContractStatus  @default(DRAFT)
+  startDate        DateTime?
+  endDate          DateTime?
+  noticePeriodDays Int?
+  amountPlanned    Float?
+  notes            String?
+  renewalType      RenewalType     @default(NONE)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  vendor           Vendor          @relation(fields: [vendorId], references: [id])
+  project          Project?        @relation(fields: [projectId], references: [id])
+  supportServices  SupportService[]
+  budgetItems      BudgetItem[]
+  actions          Action[]
+  communications   Communication[]
+}
+
+model SupportService {
+  id         String    @id @default(cuid())
+  vendorId   String?
+  contractId String?
+  title      String
+  scope      String?
+  criticality String?
+  notes      String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  vendor     Vendor?   @relation(fields: [vendorId], references: [id])
+  contract   Contract? @relation(fields: [contractId], references: [id])
+}
+
+model BudgetItem {
+  id                    String    @id @default(cuid())
+  title                 String
+  category              String?
+  projectId             String?
+  contractId            String?
+  vendorId              String?
+  fiscalYear            Int?
+  plannedAmount         Float?
+  committedAmount       Float?
+  estimatedActualAmount Float?
+  notes                 String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  project               Project?  @relation(fields: [projectId], references: [id])
+  contract              Contract? @relation(fields: [contractId], references: [id])
+  vendor                Vendor?   @relation(fields: [vendorId], references: [id])
+}
+
+model Communication {
+  id              String              @id @default(cuid())
+  title           String
+  type            String?
+  status          CommunicationStatus @default(DRAFT)
+  contentText     String?
+  contentMarkdown String?
+  projectId       String?
+  actionId        String?
+  contractId      String?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  project         Project?            @relation(fields: [projectId], references: [id])
+  action          Action?             @relation(fields: [actionId], references: [id])
+  contract        Contract?           @relation(fields: [contractId], references: [id])
+}
+
+model MeetingNote {
+  id                    String   @id @default(cuid())
+  projectId             String?
+  title                 String
+  meetingDate           DateTime
+  attendeesJson         String?
+  rawContent            String
+  summary               String?
+  extractedActionsJson  String?
+  extractedDecisionsJson String?
+  extractedRisksJson    String?
+  extractedDeadlinesJson String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  project               Project? @relation(fields: [projectId], references: [id])
+}
+
+model Email {
+  id                String   @id @default(cuid())
+  externalMessageId String   @unique
+  subject           String
+  fromEmail         String
+  receivedAt        DateTime
+  snippet           String?
+  linkedProjectId   String?
+  linkedActionId    String?
+  rawMetadataJson   String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  linkedProject     Project? @relation(fields: [linkedProjectId], references: [id])
+  linkedAction      Action?  @relation(fields: [linkedActionId], references: [id])
+}
+
+model AIJob {
+  id             String         @id @default(cuid())
+  sourceType     String
+  sourceEntityId String
+  providerMode   AIProviderMode
+  providerName   String
+  taskType       String
+  inputText      String
+  outputJson     String?
+  status         AIJobStatus    @default(PENDING)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+}
+
+model Note {
+  id         String   @id @default(cuid())
+  title      String
+  content    String
+  entityType String
+  entityId   String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
