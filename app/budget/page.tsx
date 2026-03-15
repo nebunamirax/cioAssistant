@@ -51,6 +51,7 @@ export default async function BudgetPage({ searchParams }: BudgetPageProps) {
               <th className="p-3">Engagé</th>
               <th className="p-3">Réel estimé</th>
               <th className="p-3">Rattachement</th>
+              <th className="p-3">Modifier</th>
             </tr>
           </thead>
           <tbody>
@@ -66,11 +67,16 @@ export default async function BudgetPage({ searchParams }: BudgetPageProps) {
                 <td className="p-3">{item.committedAmount ?? "—"}</td>
                 <td className="p-3">{item.estimatedActualAmount ?? "—"}</td>
                 <td className="p-3">{item.project?.title ?? item.contract?.title ?? item.vendor?.name ?? "—"}</td>
+                <td className="p-3">
+                  <Link href={`/budget/${item.id}`} className="text-slate-900 hover:underline">
+                    Modifier
+                  </Link>
+                </td>
               </tr>
             ))}
             {budgetItems.length === 0 && (
               <tr>
-                <td colSpan={6} className="p-3 text-slate-500">
+                <td colSpan={7} className="p-3 text-slate-500">
                   Aucune ligne budgétaire.
                 </td>
               </tr>

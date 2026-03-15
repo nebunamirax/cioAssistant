@@ -25,36 +25,42 @@
 
 ## Module Actions
 - Liste serveur avec filtres `search`, `status`, `priority` et `overdueOnly`.
+- La liste expose un accès direct à l'édition de chaque entrée.
 - Détail d'action sur `/actions/[id]` avec édition via `PATCH /api/actions/[id]`.
 - Suppression via `DELETE /api/actions/[id]`.
 - Le service `lib/services/action-service.ts` centralise la normalisation des champs optionnels et la gestion de `completedAt`.
 
 ## Module Projets
 - Liste serveur avec filtres `search`, `type`, `status` et `priority`.
+- La liste expose un accès direct à l'édition de chaque entrée.
 - Détail projet sur `/projects/[id]` avec édition via `PATCH /api/projects/[id]`.
 - Suppression via `DELETE /api/projects/[id]`.
 - Le service `lib/services/project-service.ts` centralise les filtres, la normalisation des champs optionnels et le chargement des relations métier principales.
 
 ## Module Contrats
 - Liste serveur avec filtres `search`, `status`, `renewalType` et `expiringOnly`.
+- La liste expose un accès direct à l'édition de chaque entrée.
 - Détail contrat sur `/contracts/[id]` avec édition via `PATCH /api/contracts/[id]`.
 - Suppression via `DELETE /api/contracts/[id]`.
 - Le service `lib/services/contract-service.ts` centralise les échéances de contrat, la normalisation des champs optionnels et le chargement des relations principales.
 
 ## Module Prestataires
 - Liste serveur avec filtres `search` et `category`.
+- La liste expose un accès direct à l'édition de chaque entrée.
 - Détail prestataire sur `/vendors/[id]` avec édition via `PATCH /api/vendors/[id]`.
 - Suppression via `DELETE /api/vendors/[id]`.
 - Le service `lib/services/vendor-service.ts` centralise la normalisation des contacts et le chargement des contrats/actions/services liés.
 
 ## Module Budget
 - Liste serveur avec filtres `search`, `category` et `fiscalYear`.
+- La liste expose un accès direct à l'édition de chaque entrée.
 - Détail d'une ligne budgétaire sur `/budget/[id]` avec édition via `PATCH /api/budget-items/[id]`.
 - Suppression via `DELETE /api/budget-items/[id]`.
 - Le service `lib/services/budget-item-service.ts` centralise les montants budgétaires, les rattachements projet/contrat/prestataire et la normalisation des champs optionnels.
 
 ## Module Communications
 - Liste serveur avec filtres `search`, `status`, `type`, `projectId`, `actionId` et `contractId`.
+- La liste expose un accès direct à l'édition de chaque entrée.
 - Détail de communication sur `/communications/[id]` avec édition via `PATCH /api/communications/[id]`.
 - Suppression via `DELETE /api/communications/[id]`.
 - Export Markdown unitaire ou global via `GET /api/export/markdown`.

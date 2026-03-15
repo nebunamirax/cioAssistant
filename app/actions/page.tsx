@@ -54,6 +54,7 @@ export default async function ActionsPage({ searchParams }: ActionsPageProps) {
               <th className="p-3">Priorité</th>
               <th className="p-3">Projet</th>
               <th className="p-3">Échéance</th>
+              <th className="p-3">Modifier</th>
             </tr>
           </thead>
           <tbody>
@@ -68,11 +69,16 @@ export default async function ActionsPage({ searchParams }: ActionsPageProps) {
                 <td className="p-3">{action.priority}</td>
                 <td className="p-3">{action.project?.title ?? "—"}</td>
                 <td className="p-3">{action.dueDate ? new Intl.DateTimeFormat("fr-FR").format(action.dueDate) : "—"}</td>
+                <td className="p-3">
+                  <Link href={`/actions/${action.id}`} className="text-slate-900 hover:underline">
+                    Modifier
+                  </Link>
+                </td>
               </tr>
             ))}
             {actions.length === 0 && (
               <tr>
-                <td colSpan={5} className="p-3 text-slate-500">
+                <td colSpan={6} className="p-3 text-slate-500">
                   Aucune action.
                 </td>
               </tr>

@@ -57,6 +57,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
               <th className="p-3">Priorité</th>
               <th className="p-3">Cible</th>
               <th className="p-3">Actions</th>
+              <th className="p-3">Modifier</th>
             </tr>
           </thead>
           <tbody>
@@ -72,11 +73,16 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
                 <td className="p-3">{project.priority}</td>
                 <td className="p-3">{project.targetDate ? new Intl.DateTimeFormat("fr-FR").format(project.targetDate) : "—"}</td>
                 <td className="p-3">{project._count.actions}</td>
+                <td className="p-3">
+                  <Link href={`/projects/${project.id}`} className="text-slate-900 hover:underline">
+                    Modifier
+                  </Link>
+                </td>
               </tr>
             ))}
             {projects.length === 0 && (
               <tr>
-                <td colSpan={6} className="p-3 text-slate-500">
+                <td colSpan={7} className="p-3 text-slate-500">
                   Aucun projet.
                 </td>
               </tr>

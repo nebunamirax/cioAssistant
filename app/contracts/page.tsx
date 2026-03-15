@@ -64,6 +64,7 @@ export default async function ContractsPage({ searchParams }: ContractsPageProps
               <th className="p-3">Renouvellement</th>
               <th className="p-3">Échéance</th>
               <th className="p-3">Actions</th>
+              <th className="p-3">Modifier</th>
             </tr>
           </thead>
           <tbody>
@@ -79,11 +80,16 @@ export default async function ContractsPage({ searchParams }: ContractsPageProps
                 <td className="p-3">{contract.renewalType}</td>
                 <td className="p-3">{contract.endDate ? new Intl.DateTimeFormat("fr-FR").format(contract.endDate) : "—"}</td>
                 <td className="p-3">{contract._count.actions}</td>
+                <td className="p-3">
+                  <Link href={`/contracts/${contract.id}`} className="text-slate-900 hover:underline">
+                    Modifier
+                  </Link>
+                </td>
               </tr>
             ))}
             {contracts.length === 0 && (
               <tr>
-                <td colSpan={6} className="p-3 text-slate-500">
+                <td colSpan={7} className="p-3 text-slate-500">
                   Aucun contrat.
                 </td>
               </tr>

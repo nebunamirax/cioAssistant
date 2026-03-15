@@ -76,6 +76,7 @@ export default async function CommunicationsPage({ searchParams }: Communication
               <th className="p-3">Liens</th>
               <th className="p-3">Mise à jour</th>
               <th className="p-3">Export</th>
+              <th className="p-3">Modifier</th>
             </tr>
           </thead>
           <tbody>
@@ -107,11 +108,16 @@ export default async function CommunicationsPage({ searchParams }: Communication
                     Markdown
                   </a>
                 </td>
+                <td className="p-3">
+                  <Link href={`/communications/${communication.id}`} className="text-slate-900 hover:underline">
+                    Modifier
+                  </Link>
+                </td>
               </tr>
             ))}
             {communications.length === 0 && (
               <tr>
-                <td colSpan={6} className="p-3 text-slate-500">
+                <td colSpan={7} className="p-3 text-slate-500">
                   Aucune communication.
                 </td>
               </tr>

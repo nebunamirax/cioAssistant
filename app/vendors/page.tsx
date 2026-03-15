@@ -32,6 +32,7 @@ export default async function VendorsPage({ searchParams }: VendorsPageProps) {
               <th className="p-3">Contact</th>
               <th className="p-3">Contrats</th>
               <th className="p-3">Actions</th>
+              <th className="p-3">Modifier</th>
             </tr>
           </thead>
           <tbody>
@@ -46,11 +47,16 @@ export default async function VendorsPage({ searchParams }: VendorsPageProps) {
                 <td className="p-3">{vendor.mainContactName ?? vendor.mainContactEmail ?? "—"}</td>
                 <td className="p-3">{vendor._count.contracts}</td>
                 <td className="p-3">{vendor._count.actions}</td>
+                <td className="p-3">
+                  <Link href={`/vendors/${vendor.id}`} className="text-slate-900 hover:underline">
+                    Modifier
+                  </Link>
+                </td>
               </tr>
             ))}
             {vendors.length === 0 && (
               <tr>
-                <td colSpan={5} className="p-3 text-slate-500">
+                <td colSpan={6} className="p-3 text-slate-500">
                   Aucun prestataire.
                 </td>
               </tr>
