@@ -23,6 +23,17 @@
 4. Service persiste via Prisma.
 5. API retourne JSON normalisé.
 
+## Module Actions
+- Liste serveur avec filtres `search`, `status`, `priority` et `overdueOnly`.
+- Détail d'action sur `/actions/[id]` avec édition via `PATCH /api/actions/[id]`.
+- Suppression via `DELETE /api/actions/[id]`.
+- Le service `lib/services/action-service.ts` centralise la normalisation des champs optionnels et la gestion de `completedAt`.
+
+## Validation et exécution
+- L'environnement de vérification cible passe par Docker Compose.
+- `docker compose run --rm test` lance Vitest dans le conteneur.
+- `docker compose run --rm verify` lance la séquence complète tests + Prisma + lint + build.
+
 ## Stratégie IA
 - Interface fournisseur unique (`AIProvider`).
 - Choix runtime entre local et API externe.

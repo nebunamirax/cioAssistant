@@ -65,6 +65,7 @@ docs/
 
 ## Endpoints API
 - `GET|POST /api/actions`
+- `GET|PATCH|DELETE /api/actions/[id]`
 - `GET /api/projects`
 - `GET /api/vendors`
 - `GET /api/contracts`
@@ -114,10 +115,17 @@ Pour lancer uniquement les tests :
 docker compose run --rm test
 ```
 
+Pour valider uniquement la feature `Actions` dans le conteneur :
+
+```bash
+docker compose run --rm --entrypoint sh test -lc "npm run test:run -- tests/action-schema.test.ts tests/action-service.test.ts"
+```
+
 Pour lancer l'application localement dans Docker :
 
 ```bash
 docker compose up app
 ```
 
-La commande initialise aussi le schema Prisma SQLite dans le conteneur avant l'execution.
+`verify` exécute les tests, `prisma db push`, le lint et le build dans le conteneur.
+`app` initialise aussi le schéma Prisma SQLite dans le conteneur avant l'exécution.

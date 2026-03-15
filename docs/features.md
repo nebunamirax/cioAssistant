@@ -3,7 +3,7 @@
 | Module | Description | Statut | Dépendances |
 |---|---|---|---|
 | Dashboard | Vue synthèse des priorités et alertes | implemented (minimal) | Prisma |
-| Actions | CRUD complet actions + filtres de base | implemented (initial) | Prisma, Zod |
+| Actions | CRUD complet, filtres statut/priorité/retard, vue détail, édition et suppression | implemented | Prisma, Zod |
 | Projets | Liste et fiches projet | planned | Prisma, Zod |
 | Réunions | Comptes-rendus + extraction | planned | Prisma, IA |
 | Prestataires | Gestion fournisseurs | planned | Prisma, Zod |

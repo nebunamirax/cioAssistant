@@ -14,4 +14,19 @@ export const actionSchema = z.object({
   sourceRef: z.string().optional().nullable()
 });
 
+export const actionUpdateSchema = actionSchema.partial().extend({
+  title: z.string().min(3).optional()
+}).refine((value) => Object.keys(value).length > 0, {
+  message: "At least one field must be provided"
+});
+
+export const actionFilterSchema = z.object({
+  search: z.string().trim().optional(),
+  status: z.enum(ACTION_STATUSES).optional(),
+  priority: z.enum(PRIORITIES).optional(),
+  overdueOnly: z.boolean().optional().default(false)
+});
+
 export type ActionInput = z.infer<typeof actionSchema>;
+export type ActionUpdateInput = z.infer<typeof actionUpdateSchema>;
+export type ActionFilters = z.infer<typeof actionFilterSchema>;
