@@ -38,6 +38,7 @@ type CommunicationFormProps = {
   actionOptions: Option[];
   contractOptions: Option[];
   initialValues?: Partial<CommunicationFormValues>;
+  showHeader?: boolean;
 };
 
 export function CommunicationForm({
@@ -46,7 +47,8 @@ export function CommunicationForm({
   projectOptions,
   actionOptions,
   contractOptions,
-  initialValues
+  initialValues,
+  showHeader = true
 }: CommunicationFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -62,6 +64,20 @@ export function CommunicationForm({
   const [actionId, setActionId] = useState(initialValues?.actionId ?? "");
   const [contractId, setContractId] = useState(initialValues?.contractId ?? "");
   const [autoGenerate, setAutoGenerate] = useState(Boolean(initialValues?.templateKey));
+
+  useEffect(() => {
+    setTitle(initialValues?.title ?? "");
+    setType(initialValues?.type ?? "");
+    setStatus(initialValues?.status ?? "DRAFT");
+    setTemplateKey(initialValues?.templateKey ?? "");
+    setTemplateInputData(initialValues?.templateInputData ?? {});
+    setContentText(initialValues?.contentText ?? "");
+    setContentMarkdown(initialValues?.contentMarkdown ?? "");
+    setProjectId(initialValues?.projectId ?? "");
+    setActionId(initialValues?.actionId ?? "");
+    setContractId(initialValues?.contractId ?? "");
+    setAutoGenerate(Boolean(initialValues?.templateKey));
+  }, [communicationId, initialValues, mode]);
 
   const selectedTemplate = getCommunicationTemplate(templateKey);
   const projectTitle = projectOptions.find((option) => option.id === projectId)?.label;
@@ -137,52 +153,67 @@ export function CommunicationForm({
   };
 
   return (
-    <form onSubmit={submit} className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
-      <h2 className="font-semibold">{mode === "create" ? "Nouvelle communication" : "Modifier la communication"}</h2>
-      <input
-        value={title}
-        onChange={(e) => {
-          setAutoGenerate(false);
-          setTitle(e.target.value);
-        }}
-        placeholder="Titre"
-        required
-        className="w-full rounded border border-slate-300 px-3 py-2"
-      />
-      <div className="grid gap-3 md:grid-cols-2">
-        <select
-          value={templateKey}
-          onChange={(e) => {
-            const nextTemplateKey = e.target.value as CommunicationTemplateKey | "";
-            setTemplateKey(nextTemplateKey);
-            setTemplateInputData({});
-            setAutoGenerate(Boolean(nextTemplateKey));
-          }}
-          className="rounded border border-slate-300 px-3 py-2"
-        >
-          <option value="">Aucun template</option>
-          {Object.values(communicationTemplates).map((template) => (
-            <option key={template.key} value={template.key}>
-              {template.label}
-            </option>
-          ))}
-        </select>
-        <input
-          value={type}
-          onChange={(e) => {
-            setAutoGenerate(false);
-            setType(e.target.value);
-          }}
-          placeholder="Type (email, note, annonce...)"
-          className="w-full rounded border border-slate-300 px-3 py-2"
-        />
-      </div>
+    <form onSubmit={submit} className="form-stack">
+      {showHeader && <h2 className="panel-title">{mode === "create" ? "Nouvelle communication" : "Modifier la communication"}</h2>}
+      <section className="form-section space-y-3">
+        <div>
+          <h3 className="form-section-title">Cadre éditorial</h3>
+          <p className="form-section-caption">Choisis un template si tu veux partir d’une trame guidée, sinon rédige librement.</p>
+        </div>
+        <div className="grid gap-3 md:grid-cols-2">
+          <div>
+            <label className="field-label">Template</label>
+            <select
+              value={templateKey}
+              onChange={(e) => {
+                const nextTemplateKey = e.target.value as CommunicationTemplateKey | "";
+                setTemplateKey(nextTemplateKey);
+                setTemplateInputData({});
+                setAutoGenerate(Boolean(nextTemplateKey));
+              }}
+              className="field-select"
+            >
+              <option value="">Aucun template</option>
+              {Object.values(communicationTemplates).map((template) => (
+                <option key={template.key} value={template.key}>
+                  {template.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="field-label">Type</label>
+            <input
+              value={type}
+              onChange={(e) => {
+                setAutoGenerate(false);
+                setType(e.target.value);
+              }}
+              placeholder="Email, note, annonce..."
+              className="field-input"
+            />
+          </div>
+        </div>
+        <div>
+          <label className="field-label">Titre</label>
+          <input
+            value={title}
+            onChange={(e) => {
+              setAutoGenerate(false);
+              setTitle(e.target.value);
+            }}
+            placeholder="Titre de communication"
+            required
+            className="field-input"
+          />
+        </div>
+      </section>
       {selectedTemplate && (
-        <div className="space-y-3 rounded border border-slate-200 bg-slate-50 p-4">
+        <section className="form-section space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="font-medium text-slate-900">{selectedTemplate.label}</p>
-              <p className="text-sm text-slate-600">{selectedTemplate.description}</p>
+              <h3 className="form-section-title">{selectedTemplate.label}</h3>
+              <p className="form-section-caption">{selectedTemplate.description}</p>
             </div>
             <div className="flex items-center gap-3 text-sm text-slate-700">
               <label className="flex items-center gap-2">
@@ -193,15 +224,12 @@ export function CommunicationForm({
                 />
                 Génération automatique
               </label>
-              <button
-                type="button"
-                onClick={() => setAutoGenerate(true)}
-                className="rounded border border-slate-300 px-3 py-2"
-              >
+              <button type="button" onClick={() => setAutoGenerate(true)} className="button-secondary">
                 Régénérer
               </button>
             </div>
           </div>
+          <p className="field-hint">Remplis d’abord les champs du template, puis ajuste le texte généré si nécessaire.</p>
           <div className="grid gap-3 md:grid-cols-2">
             {selectedTemplate.fields.map((field) => {
               const commonProps = {
@@ -213,12 +241,12 @@ export function CommunicationForm({
                   }));
                 },
                 placeholder: field.placeholder,
-                className: "w-full rounded border border-slate-300 px-3 py-2"
+                className: field.type === "textarea" ? "field-textarea" : "field-input"
               };
 
               return (
                 <label key={field.key} className={field.type === "textarea" ? "md:col-span-2" : ""}>
-                  <span className="mb-1 block text-sm font-medium text-slate-700">{field.label}</span>
+                  <span className="field-label">{field.label}</span>
                   {field.type === "textarea" ? (
                     <textarea {...commonProps} rows={4} />
                   ) : (
@@ -228,70 +256,103 @@ export function CommunicationForm({
               );
             })}
           </div>
-        </div>
+        </section>
       )}
-      <div className="grid gap-3 md:grid-cols-2">
-        <select value={status} onChange={(e) => setStatus(e.target.value as (typeof COMMUNICATION_STATUSES)[number])} className="rounded border border-slate-300 px-3 py-2">
-          {COMMUNICATION_STATUSES.map((item) => (
-            <option key={item} value={item}>
-              {item}
-            </option>
-          ))}
-        </select>
-        <div className="rounded border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
-          Les templates remplissent automatiquement le titre et le contenu. Toute modification manuelle coupe cette génération jusqu'à régénération.
+      <section className="form-section space-y-3">
+        <div>
+          <h3 className="form-section-title">Diffusion et rattachement</h3>
+          <p className="form-section-caption">Positionne la communication dans son cycle de vie et rattache-la au bon contexte métier.</p>
         </div>
-      </div>
-      <div className="grid gap-3 md:grid-cols-3">
-        <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className="rounded border border-slate-300 px-3 py-2">
-          <option value="">Aucun projet</option>
-          {projectOptions.map((option) => (
-            <option key={option.id} value={option.id}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-        <select value={actionId} onChange={(e) => setActionId(e.target.value)} className="rounded border border-slate-300 px-3 py-2">
-          <option value="">Aucune action</option>
-          {actionOptions.map((option) => (
-            <option key={option.id} value={option.id}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-        <select value={contractId} onChange={(e) => setContractId(e.target.value)} className="rounded border border-slate-300 px-3 py-2">
-          <option value="">Aucun contrat</option>
-          {contractOptions.map((option) => (
-            <option key={option.id} value={option.id}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </div>
-      <textarea
-        value={contentText}
-        onChange={(e) => {
-          setAutoGenerate(false);
-          setContentText(e.target.value);
-        }}
-        placeholder="Contenu texte"
-        rows={5}
-        className="w-full rounded border border-slate-300 px-3 py-2"
-      />
-      <textarea
-        value={contentMarkdown}
-        onChange={(e) => {
-          setAutoGenerate(false);
-          setContentMarkdown(e.target.value);
-        }}
-        placeholder="Contenu Markdown"
-        rows={8}
-        className="w-full rounded border border-slate-300 px-3 py-2 font-mono text-sm"
-      />
+        <div className="grid gap-3 md:grid-cols-2">
+          <div>
+            <label className="field-label">Statut</label>
+            <select value={status} onChange={(e) => setStatus(e.target.value as (typeof COMMUNICATION_STATUSES)[number])} className="field-select">
+              {COMMUNICATION_STATUSES.map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="workbench-section text-sm text-slate-600">
+            Les templates remplissent automatiquement le titre et le contenu. Toute modification manuelle coupe cette génération jusqu'à régénération.
+          </div>
+        </div>
+        <div className="grid gap-3 md:grid-cols-3">
+          <div>
+            <label className="field-label">Projet</label>
+            <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className="field-select">
+              <option value="">Aucun projet</option>
+              {projectOptions.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="field-label">Action</label>
+            <select value={actionId} onChange={(e) => setActionId(e.target.value)} className="field-select">
+              <option value="">Aucune action</option>
+              {actionOptions.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="field-label">Contrat</label>
+            <select value={contractId} onChange={(e) => setContractId(e.target.value)} className="field-select">
+              <option value="">Aucun contrat</option>
+              {contractOptions.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </section>
+      <section className="form-section space-y-3">
+        <div>
+          <h3 className="form-section-title">Contenu</h3>
+          <p className="form-section-caption">Le texte simple sert à la lecture rapide. Le Markdown permet l’export et la mise en forme.</p>
+        </div>
+        <div>
+          <label className="field-label">Contenu texte</label>
+          <textarea
+            value={contentText}
+            onChange={(e) => {
+              setAutoGenerate(false);
+              setContentText(e.target.value);
+            }}
+            placeholder="Version texte lisible rapidement"
+            rows={5}
+            className="field-textarea"
+          />
+        </div>
+        <div>
+          <label className="field-label">Contenu Markdown</label>
+          <textarea
+            value={contentMarkdown}
+            onChange={(e) => {
+              setAutoGenerate(false);
+              setContentMarkdown(e.target.value);
+            }}
+            placeholder="Version structurée pour export"
+            rows={8}
+            className="field-textarea font-mono text-sm"
+          />
+        </div>
+      </section>
       {error && <p className="text-sm text-red-600">{error}</p>}
-      <button disabled={loading} className="rounded bg-slate-900 px-4 py-2 text-white disabled:opacity-50">
-        {loading ? (mode === "create" ? "Création..." : "Enregistrement...") : mode === "create" ? "Créer" : "Enregistrer"}
-      </button>
+      <div className="form-actions">
+        <p className="form-actions-note">Tu peux partir d’un template puis reprendre la main champ par champ.</p>
+        <button disabled={loading} className="button-primary">
+          {loading ? (mode === "create" ? "Création..." : "Enregistrement...") : mode === "create" ? "Créer la communication" : "Enregistrer"}
+        </button>
+      </div>
     </form>
   );
 }

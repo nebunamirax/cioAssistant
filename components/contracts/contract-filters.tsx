@@ -11,35 +11,35 @@ type ContractFiltersProps = {
 
 export function ContractFilters({ values }: ContractFiltersProps) {
   return (
-    <form className="grid gap-3 rounded-lg border border-slate-200 bg-white p-4 md:grid-cols-4">
+    <form className="workbench-toolbar">
       <input
         type="search"
         name="search"
         defaultValue={values.search ?? ""}
         placeholder="Recherche"
-        className="rounded border border-slate-300 px-3 py-2"
+        className="field-input md:col-span-2"
       />
-      <select name="status" defaultValue={values.status ?? ""} className="rounded border border-slate-300 px-3 py-2">
+      <select name="status" defaultValue={values.status ?? ""} className="field-select">
         <option value="">Tous les statuts</option>
         {CONTRACT_STATUSES.map((item) => (
           <option key={item} value={item}>{item}</option>
         ))}
       </select>
-      <select name="renewalType" defaultValue={values.renewalType ?? ""} className="rounded border border-slate-300 px-3 py-2">
+      <select name="renewalType" defaultValue={values.renewalType ?? ""} className="field-select">
         <option value="">Tous les renouvellements</option>
         {RENEWAL_TYPES.map((item) => (
           <option key={item} value={item}>{item}</option>
         ))}
       </select>
-      <label className="flex items-center gap-2 rounded border border-slate-300 px-3 py-2 text-sm text-slate-700">
+      <label className="flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700">
         <input type="checkbox" name="expiringOnly" value="true" defaultChecked={values.expiringOnly ?? false} />
         Échéance 90 jours
       </label>
-      <div className="md:col-span-4 flex gap-2">
-        <button type="submit" className="rounded bg-slate-900 px-4 py-2 text-white">
+      <div className="flex gap-2 md:col-span-4">
+        <button type="submit" className="button-primary">
           Filtrer
         </button>
-        <a href="/contracts" className="rounded border border-slate-300 px-4 py-2 text-slate-700">
+        <a href="/contracts" className="button-secondary">
           Réinitialiser
         </a>
       </div>

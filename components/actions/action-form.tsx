@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ACTION_STATUSES, PRIORITIES } from "@/lib/domain/constants";
 
 type ActionFormValues = {
@@ -16,9 +16,10 @@ type ActionFormProps = {
   mode?: "create" | "edit";
   actionId?: string;
   initialValues?: Partial<ActionFormValues>;
+  showHeader?: boolean;
 };
 
-export function ActionForm({ mode = "create", actionId, initialValues }: ActionFormProps) {
+export function ActionForm({ mode = "create", actionId, initialValues, showHeader = true }: ActionFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -27,6 +28,14 @@ export function ActionForm({ mode = "create", actionId, initialValues }: ActionF
   const [dueDate, setDueDate] = useState(initialValues?.dueDate ?? "");
   const [status, setStatus] = useState<(typeof ACTION_STATUSES)[number]>(initialValues?.status ?? "TODO");
   const [priority, setPriority] = useState<(typeof PRIORITIES)[number]>(initialValues?.priority ?? "NORMAL");
+
+  useEffect(() => {
+    setTitle(initialValues?.title ?? "");
+    setDescription(initialValues?.description ?? "");
+    setDueDate(initialValues?.dueDate ?? "");
+    setStatus(initialValues?.status ?? "TODO");
+    setPriority(initialValues?.priority ?? "NORMAL");
+  }, [actionId, initialValues, mode]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,44 +74,76 @@ export function ActionForm({ mode = "create", actionId, initialValues }: ActionF
   };
 
   return (
-    <form onSubmit={submit} className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
-      <h2 className="font-semibold">{mode === "create" ? "Nouvelle action" : "Modifier l'action"}</h2>
-      <input
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        placeholder="Titre"
-        required
-        className="w-full rounded border border-slate-300 px-3 py-2"
-      />
-      <textarea
-        value={description}
-        onChange={(e) => setDescription(e.target.value)}
-        placeholder="Description"
-        rows={4}
-        className="w-full rounded border border-slate-300 px-3 py-2"
-      />
-      <div className="grid gap-3 md:grid-cols-2">
-        <select value={status} onChange={(e) => setStatus(e.target.value as (typeof ACTION_STATUSES)[number])} className="rounded border border-slate-300 px-3 py-2">
-          {ACTION_STATUSES.map((s) => (
-            <option key={s} value={s}>{s}</option>
-          ))}
-        </select>
-        <select value={priority} onChange={(e) => setPriority(e.target.value as (typeof PRIORITIES)[number])} className="rounded border border-slate-300 px-3 py-2">
-          {PRIORITIES.map((p) => (
-            <option key={p} value={p}>{p}</option>
-          ))}
-        </select>
-      </div>
-      <input
-        type="datetime-local"
-        value={dueDate}
-        onChange={(e) => setDueDate(e.target.value)}
-        className="w-full rounded border border-slate-300 px-3 py-2"
-      />
+    <form onSubmit={submit} className="form-stack">
+      {showHeader && <h2 className="panel-title">{mode === "create" ? "Nouvelle action" : "Modifier l'action"}</h2>}
+      <section className="form-section space-y-3">
+        <div>
+          <h3 className="form-section-title">Essentiel</h3>
+          <p className="form-section-caption">Décris clairement l’action à exécuter. Commence par le résultat attendu.</p>
+        </div>
+        <div>
+          <label className="field-label">Titre</label>
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Ex: Valider le budget infra 2026"
+            required
+            className="field-input"
+          />
+        </div>
+        <div>
+          <label className="field-label">Description</label>
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Contexte, livrable attendu, point de vigilance..."
+            rows={4}
+            className="field-textarea"
+          />
+          <p className="field-hint">Optionnel, mais utile pour transmettre l’intention sans devoir ouvrir une fiche détail.</p>
+        </div>
+      </section>
+      <section className="form-section space-y-3">
+        <div>
+          <h3 className="form-section-title">Pilotage</h3>
+          <p className="form-section-caption">Positionne l’action dans le flux de travail et fixe son niveau d’attention.</p>
+        </div>
+        <div className="grid gap-3 md:grid-cols-2">
+          <div>
+            <label className="field-label">Statut</label>
+            <select value={status} onChange={(e) => setStatus(e.target.value as (typeof ACTION_STATUSES)[number])} className="field-select">
+              {ACTION_STATUSES.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="field-label">Priorité</label>
+            <select value={priority} onChange={(e) => setPriority(e.target.value as (typeof PRIORITIES)[number])} className="field-select">
+              {PRIORITIES.map((p) => (
+                <option key={p} value={p}>{p}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <div>
+          <label className="field-label">Échéance</label>
+          <input
+            type="datetime-local"
+            value={dueDate}
+            onChange={(e) => setDueDate(e.target.value)}
+            className="field-input"
+          />
+          <p className="field-hint">Laisse vide si l’action reste ouverte sans date cible.</p>
+        </div>
+      </section>
       {error && <p className="text-sm text-red-600">{error}</p>}
-      <button disabled={loading} className="rounded bg-slate-900 px-4 py-2 text-white disabled:opacity-50">
-        {loading ? (mode === "create" ? "Création..." : "Enregistrement...") : mode === "create" ? "Créer" : "Enregistrer"}
-      </button>
+      <div className="form-actions">
+        <p className="form-actions-note">Les changements sont enregistrés sur l’action sélectionnée.</p>
+        <button disabled={loading} className="button-primary">
+          {loading ? (mode === "create" ? "Création..." : "Enregistrement...") : mode === "create" ? "Créer l'action" : "Enregistrer"}
+        </button>
+      </div>
     </form>
   );
 }

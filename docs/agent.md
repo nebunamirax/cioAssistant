@@ -7,6 +7,7 @@ Application web locale de pilotage personnel pour DSI de PME (mono-utilisateur) 
 - Centraliser les actions quotidiennes.
 - Relier actions, projets, contrats, fournisseurs et budget.
 - Produire des communications et comptes-rendus exploitables.
+- Favoriser une interface dense avec édition contextuelle sans multiplier les changements de page.
 - Préparer l’architecture Outlook, Notion et IA sans les rendre bloquants.
 
 ## Conventions de code

@@ -1,8 +1,9 @@
 import Link from "next/link";
+import { ActionDeleteButton } from "@/components/actions/action-delete-button";
 import { ActionForm } from "@/components/actions/action-form";
 import { ActionFilters } from "@/components/actions/action-filters";
 import { ACTION_STATUSES, PRIORITIES } from "@/lib/domain/constants";
-import { listActions } from "@/lib/services/action-service";
+import { getActionById, listActions } from "@/lib/services/action-service";
 import type { ActionFilters as ActionFiltersInput } from "@/lib/validation/action";
 
 type ActionsPageProps = {
@@ -11,6 +12,7 @@ type ActionsPageProps = {
     status?: string;
     priority?: string;
     overdueOnly?: string;
+    selectedId?: string;
   };
 };
 
@@ -38,53 +40,146 @@ export default async function ActionsPage({ searchParams }: ActionsPageProps) {
     priority,
     overdueOnly: searchParams?.overdueOnly === "true"
   };
-  const actions = await listActions(filters);
+  const [actions, selectedAction] = await Promise.all([
+    listActions(filters),
+    searchParams?.selectedId ? getActionById(searchParams.selectedId) : null
+  ]);
+
+  const selectedActionStatus = selectedAction && ACTION_STATUSES.includes(selectedAction.status as (typeof ACTION_STATUSES)[number])
+    ? (selectedAction.status as (typeof ACTION_STATUSES)[number])
+    : "TODO";
+  const selectedActionPriority = selectedAction && PRIORITIES.includes(selectedAction.priority as (typeof PRIORITIES)[number])
+    ? (selectedAction.priority as (typeof PRIORITIES)[number])
+    : "NORMAL";
+  const baseParams = new URLSearchParams();
+
+  if (searchParams?.search) baseParams.set("search", searchParams.search);
+  if (status) baseParams.set("status", status);
+  if (priority) baseParams.set("priority", priority);
+  if (searchParams?.overdueOnly === "true") baseParams.set("overdueOnly", "true");
+
+  const buildSelectionHref = (selectedId?: string) => {
+    const params = new URLSearchParams(baseParams);
+
+    if (selectedId) {
+      params.set("selectedId", selectedId);
+    }
+
+    const query = params.toString();
+    return query ? `/actions?${query}` : "/actions";
+  };
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-semibold">Actions</h1>
-      <ActionFilters values={filters} />
-      <ActionForm />
-      <div className="rounded-lg border border-slate-200 bg-white">
-        <table className="w-full table-auto text-sm">
-          <thead className="bg-slate-100 text-left text-slate-700">
-            <tr>
-              <th className="p-3">Titre</th>
-              <th className="p-3">Statut</th>
-              <th className="p-3">Priorité</th>
-              <th className="p-3">Projet</th>
-              <th className="p-3">Échéance</th>
-              <th className="p-3">Modifier</th>
-            </tr>
-          </thead>
-          <tbody>
-            {actions.map((action) => (
-              <tr key={action.id} className="border-t border-slate-100">
-                <td className="p-3">
-                  <Link href={`/actions/${action.id}`} className="font-medium text-slate-900 hover:underline">
-                    {action.title}
-                  </Link>
-                </td>
-                <td className="p-3">{action.status}</td>
-                <td className="p-3">{action.priority}</td>
-                <td className="p-3">{action.project?.title ?? "—"}</td>
-                <td className="p-3">{action.dueDate ? new Intl.DateTimeFormat("fr-FR").format(action.dueDate) : "—"}</td>
-                <td className="p-3">
-                  <Link href={`/actions/${action.id}`} className="text-slate-900 hover:underline">
-                    Modifier
-                  </Link>
-                </td>
-              </tr>
-            ))}
-            {actions.length === 0 && (
-              <tr>
-                <td colSpan={6} className="p-3 text-slate-500">
-                  Aucune action.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+      <div className="workbench-header">
+        <div className="space-y-2">
+          <h1 className="text-2xl font-semibold">Actions</h1>
+          <p className="text-sm text-slate-600">Pilote les tâches dans une vue compacte avec sélection, édition et contexte sur le même écran.</p>
+          <div className="workbench-kpi-grid">
+            <div className="workbench-kpi">
+              <div className="workbench-kpi-label">Total</div>
+              <div className="workbench-kpi-value">{actions.length}</div>
+            </div>
+            <div className="workbench-kpi">
+              <div className="workbench-kpi-label">En retard</div>
+              <div className="workbench-kpi-value">{actions.filter((action) => action.dueDate && action.status !== "DONE" && action.dueDate < new Date()).length}</div>
+            </div>
+            <div className="workbench-kpi">
+              <div className="workbench-kpi-label">Sélection</div>
+              <div className="workbench-kpi-value">{selectedAction ? "1" : "0"}</div>
+            </div>
+          </div>
+        </div>
+        {selectedAction && (
+          <Link href={buildSelectionHref()} className="button-secondary">
+            Fermer le panneau
+          </Link>
+        )}
+      </div>
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.7fr),420px]">
+        <section className="space-y-4">
+          <ActionFilters values={filters} />
+          <div className="workbench-table-shell">
+            <table className="workbench-table">
+              <thead>
+                <tr>
+                  <th>Titre</th>
+                  <th>Statut</th>
+                  <th>Priorité</th>
+                  <th>Projet</th>
+                  <th>Échéance</th>
+                  <th>Modifier</th>
+                </tr>
+              </thead>
+              <tbody>
+                {actions.map((action) => (
+                  <tr key={action.id} data-selected={searchParams?.selectedId === action.id}>
+                    <td>
+                      <Link href={buildSelectionHref(action.id)} className="font-medium text-slate-900 hover:underline">
+                        {action.title}
+                      </Link>
+                    </td>
+                    <td>{action.status}</td>
+                    <td>{action.priority}</td>
+                    <td>{action.project?.title ?? "—"}</td>
+                    <td>{action.dueDate ? new Intl.DateTimeFormat("fr-FR").format(action.dueDate) : "—"}</td>
+                    <td>
+                      <Link href={buildSelectionHref(action.id)} className="text-slate-900 hover:underline">
+                        Modifier
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+                {actions.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="text-slate-500">
+                      Aucune action.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <aside className="space-y-4 xl:sticky xl:top-4 xl:self-start">
+          <section className="workbench-panel">
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div>
+                <h2 className="panel-title">
+                  {selectedAction ? "Éditer l'action" : "Nouvelle action"}
+                </h2>
+                <p className="panel-caption">
+                  {selectedAction ? "Modifie directement les champs préremplis ci-dessous." : "Sélectionne une ligne ou crée directement une nouvelle action."}
+                </p>
+              </div>
+              {selectedAction && <ActionDeleteButton actionId={selectedAction.id} />}
+            </div>
+            <ActionForm
+              mode={selectedAction ? "edit" : "create"}
+              actionId={selectedAction?.id}
+              initialValues={selectedAction ? {
+                title: selectedAction.title,
+                description: selectedAction.description ?? "",
+                status: selectedActionStatus,
+                priority: selectedActionPriority,
+                dueDate: selectedAction.dueDate ? new Date(selectedAction.dueDate).toISOString().slice(0, 16) : ""
+              } : undefined}
+              showHeader={false}
+            />
+          </section>
+
+          {selectedAction && (
+            <section className="workbench-panel panel-stat-list">
+              <h3 className="panel-title">Contexte</h3>
+              <p><strong>Projet:</strong> {selectedAction.project?.title ?? "—"}</p>
+              <p><strong>Fournisseur:</strong> {selectedAction.vendor?.name ?? "—"}</p>
+              <p><strong>Contrat:</strong> {selectedAction.contract?.title ?? "—"}</p>
+              <p><strong>Créée le:</strong> {new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium", timeStyle: "short" }).format(selectedAction.createdAt)}</p>
+              <p><strong>Terminée le:</strong> {selectedAction.completedAt ? new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium", timeStyle: "short" }).format(selectedAction.completedAt) : "—"}</p>
+            </section>
+          )}
+        </aside>
       </div>
     </div>
   );

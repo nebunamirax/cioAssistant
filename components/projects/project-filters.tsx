@@ -11,37 +11,37 @@ type ProjectFiltersProps = {
 
 export function ProjectFilters({ values }: ProjectFiltersProps) {
   return (
-    <form className="grid gap-3 rounded-lg border border-slate-200 bg-white p-4 md:grid-cols-4">
+    <form className="workbench-toolbar">
       <input
         type="search"
         name="search"
         defaultValue={values.search ?? ""}
         placeholder="Recherche"
-        className="rounded border border-slate-300 px-3 py-2"
+        className="field-input md:col-span-2"
       />
-      <select name="type" defaultValue={values.type ?? ""} className="rounded border border-slate-300 px-3 py-2">
+      <select name="type" defaultValue={values.type ?? ""} className="field-select">
         <option value="">Tous les types</option>
         {PROJECT_TYPES.map((item) => (
           <option key={item} value={item}>{item}</option>
         ))}
       </select>
-      <select name="status" defaultValue={values.status ?? ""} className="rounded border border-slate-300 px-3 py-2">
+      <select name="status" defaultValue={values.status ?? ""} className="field-select">
         <option value="">Tous les statuts</option>
         {PROJECT_STATUSES.map((item) => (
           <option key={item} value={item}>{item}</option>
         ))}
       </select>
-      <select name="priority" defaultValue={values.priority ?? ""} className="rounded border border-slate-300 px-3 py-2">
+      <select name="priority" defaultValue={values.priority ?? ""} className="field-select">
         <option value="">Toutes les priorités</option>
         {PRIORITIES.map((item) => (
           <option key={item} value={item}>{item}</option>
         ))}
       </select>
-      <div className="md:col-span-4 flex gap-2">
-        <button type="submit" className="rounded bg-slate-900 px-4 py-2 text-white">
+      <div className="flex gap-2 md:col-span-4">
+        <button type="submit" className="button-primary">
           Filtrer
         </button>
-        <a href="/projects" className="rounded border border-slate-300 px-4 py-2 text-slate-700">
+        <a href="/projects" className="button-secondary">
           Réinitialiser
         </a>
       </div>

@@ -1,6 +1,6 @@
 # CIO Assistant
 
-Application web locale (MVP mono-utilisateur) pour piloter actions, projets, contrats, budget et communications templatisées.
+Application web locale (MVP mono-utilisateur) pour piloter actions, projets, contrats, budget et communications templatisées avec une interface de type workbench: dense, contextuelle et conçue pour éditer sans changer d'écran.
 
 ## Stack
 - Next.js App Router + TypeScript
@@ -67,6 +67,14 @@ docs/
 - `/emails`
 - `/settings/integrations`
 - `/settings/ai`
+
+## Besoin UX
+- Les modules coeur (`Actions`, `Projets`, `Contrats`, `Prestataires`, `Budget`, `Communications`) doivent fonctionner comme des postes de pilotage compacts.
+- La liste, les filtres, l'édition et le contexte métier doivent cohabiter sur une même page chaque fois que possible.
+- Les pages détail restent disponibles comme fallback, mais le parcours principal ne doit pas imposer des allers-retours entre index et détail.
+- La densité visuelle doit privilégier la vitesse de lecture et de décision, pas l'effet carte par carte.
+- Les formulaires d'édition doivent être découpés par sections métier compréhensibles, avec une hiérarchie claire entre champs essentiels, champs de pilotage et champs optionnels.
+- En mode édition, les champs doivent être préremplis avec les données de l'entrée sélectionnée, sans répéter inutilement ces valeurs dans l'entête du panneau.
 
 ## Endpoints API
 - `GET|POST /api/actions`

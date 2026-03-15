@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { PRIORITIES, PROJECT_STATUSES, PROJECT_TYPES } from "@/lib/domain/constants";
 
 type ProjectFormValues = {
@@ -18,9 +18,10 @@ type ProjectFormProps = {
   mode?: "create" | "edit";
   projectId?: string;
   initialValues?: Partial<ProjectFormValues>;
+  showHeader?: boolean;
 };
 
-export function ProjectForm({ mode = "create", projectId, initialValues }: ProjectFormProps) {
+export function ProjectForm({ mode = "create", projectId, initialValues, showHeader = true }: ProjectFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,6 +32,16 @@ export function ProjectForm({ mode = "create", projectId, initialValues }: Proje
   const [priority, setPriority] = useState<(typeof PRIORITIES)[number]>(initialValues?.priority ?? "NORMAL");
   const [startDate, setStartDate] = useState(initialValues?.startDate ?? "");
   const [targetDate, setTargetDate] = useState(initialValues?.targetDate ?? "");
+
+  useEffect(() => {
+    setTitle(initialValues?.title ?? "");
+    setDescription(initialValues?.description ?? "");
+    setType(initialValues?.type ?? "DEVELOPMENT");
+    setStatus(initialValues?.status ?? "DRAFT");
+    setPriority(initialValues?.priority ?? "NORMAL");
+    setStartDate(initialValues?.startDate ?? "");
+    setTargetDate(initialValues?.targetDate ?? "");
+  }, [initialValues, mode, projectId]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,57 +84,99 @@ export function ProjectForm({ mode = "create", projectId, initialValues }: Proje
   };
 
   return (
-    <form onSubmit={submit} className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
-      <h2 className="font-semibold">{mode === "create" ? "Nouveau projet" : "Modifier le projet"}</h2>
-      <input
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        placeholder="Titre"
-        required
-        className="w-full rounded border border-slate-300 px-3 py-2"
-      />
-      <textarea
-        value={description}
-        onChange={(e) => setDescription(e.target.value)}
-        placeholder="Description"
-        rows={4}
-        className="w-full rounded border border-slate-300 px-3 py-2"
-      />
-      <div className="grid gap-3 md:grid-cols-3">
-        <select value={type} onChange={(e) => setType(e.target.value as (typeof PROJECT_TYPES)[number])} className="rounded border border-slate-300 px-3 py-2">
-          {PROJECT_TYPES.map((item) => (
-            <option key={item} value={item}>{item}</option>
-          ))}
-        </select>
-        <select value={status} onChange={(e) => setStatus(e.target.value as (typeof PROJECT_STATUSES)[number])} className="rounded border border-slate-300 px-3 py-2">
-          {PROJECT_STATUSES.map((item) => (
-            <option key={item} value={item}>{item}</option>
-          ))}
-        </select>
-        <select value={priority} onChange={(e) => setPriority(e.target.value as (typeof PRIORITIES)[number])} className="rounded border border-slate-300 px-3 py-2">
-          {PRIORITIES.map((item) => (
-            <option key={item} value={item}>{item}</option>
-          ))}
-        </select>
-      </div>
-      <div className="grid gap-3 md:grid-cols-2">
-        <input
-          type="datetime-local"
-          value={startDate}
-          onChange={(e) => setStartDate(e.target.value)}
-          className="w-full rounded border border-slate-300 px-3 py-2"
-        />
-        <input
-          type="datetime-local"
-          value={targetDate}
-          onChange={(e) => setTargetDate(e.target.value)}
-          className="w-full rounded border border-slate-300 px-3 py-2"
-        />
-      </div>
+    <form onSubmit={submit} className="form-stack">
+      {showHeader && <h2 className="panel-title">{mode === "create" ? "Nouveau projet" : "Modifier le projet"}</h2>}
+      <section className="form-section space-y-3">
+        <div>
+          <h3 className="form-section-title">Cadre du projet</h3>
+          <p className="form-section-caption">Pose le périmètre du projet avant de détailler son pilotage.</p>
+        </div>
+        <div>
+          <label className="field-label">Titre</label>
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Ex: Refonte du poste de travail"
+            required
+            className="field-input"
+          />
+        </div>
+        <div>
+          <label className="field-label">Description</label>
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Objectif, périmètre, résultat attendu..."
+            rows={4}
+            className="field-textarea"
+          />
+        </div>
+      </section>
+      <section className="form-section space-y-3">
+        <div>
+          <h3 className="form-section-title">Pilotage</h3>
+          <p className="form-section-caption">Définis la nature du projet, son statut courant et son niveau de priorité.</p>
+        </div>
+        <div className="grid gap-3 md:grid-cols-3">
+          <div>
+            <label className="field-label">Type</label>
+            <select value={type} onChange={(e) => setType(e.target.value as (typeof PROJECT_TYPES)[number])} className="field-select">
+              {PROJECT_TYPES.map((item) => (
+                <option key={item} value={item}>{item}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="field-label">Statut</label>
+            <select value={status} onChange={(e) => setStatus(e.target.value as (typeof PROJECT_STATUSES)[number])} className="field-select">
+              {PROJECT_STATUSES.map((item) => (
+                <option key={item} value={item}>{item}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="field-label">Priorité</label>
+            <select value={priority} onChange={(e) => setPriority(e.target.value as (typeof PRIORITIES)[number])} className="field-select">
+              {PRIORITIES.map((item) => (
+                <option key={item} value={item}>{item}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </section>
+      <section className="form-section space-y-3">
+        <div>
+          <h3 className="form-section-title">Temporalité</h3>
+          <p className="form-section-caption">Ajoute des repères de calendrier si tu veux faire remonter les alertes et les échéances.</p>
+        </div>
+        <div className="grid gap-3 md:grid-cols-2">
+          <div>
+            <label className="field-label">Début</label>
+            <input
+              type="datetime-local"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="field-input"
+            />
+          </div>
+          <div>
+            <label className="field-label">Cible</label>
+            <input
+              type="datetime-local"
+              value={targetDate}
+              onChange={(e) => setTargetDate(e.target.value)}
+              className="field-input"
+            />
+          </div>
+        </div>
+      </section>
       {error && <p className="text-sm text-red-600">{error}</p>}
-      <button disabled={loading} className="rounded bg-slate-900 px-4 py-2 text-white disabled:opacity-50">
-        {loading ? (mode === "create" ? "Création..." : "Enregistrement...") : mode === "create" ? "Créer" : "Enregistrer"}
-      </button>
+      <div className="form-actions">
+        <p className="form-actions-note">Le panneau garde le contexte de portefeuille pendant l’édition.</p>
+        <button disabled={loading} className="button-primary">
+          {loading ? (mode === "create" ? "Création..." : "Enregistrement...") : mode === "create" ? "Créer le projet" : "Enregistrer"}
+        </button>
+      </div>
     </form>
   );
 }
