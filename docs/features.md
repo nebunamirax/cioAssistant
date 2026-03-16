@@ -3,7 +3,6 @@
 | Module | Description | Statut | Dépendances |
 |---|---|---|---|
 | Dashboard | Assistant conversationnel principal: chat opérateur, priorité texte + PDF, actions multi-modules, ingestion document; audio global encore à livrer | in progress | Prisma, IA, transcription |
-| Réunions | Workbench CRUD, synthèse assistée, extraction d’actions avec responsables, création d’actions, import audio et note vocale avec transcription dans le brut | in progress | Prisma, IA, transcription |
 | Actions | CRUD complet, filtres statut/priorité/retard, workbench dense liste + édition + contexte, suppression | implemented | Prisma, Zod |
 | Projets | CRUD complet, filtres de base, workbench dense liste + édition + liens métier | implemented | Prisma, Zod |
 | Réunions | Workbench notes de réunion livré: saisie brute + génération de synthèse avant sauvegarde; prochaine étape: création d’actions depuis CR avec responsables explicites et traçabilité vers la réunion | in progress | Prisma, IA, transcription |

@@ -162,7 +162,6 @@ Critères d'acceptation:
 
 ### Frontend
 - Remplacer [app/page.tsx](/Users/nebunamirax/Documents/Dev/cioAssistant/app/page.tsx) par une vraie vue de chat.
-- Remplacer ou refondre [components/dashboard/ai-intake-panel.tsx](/Users/nebunamirax/Documents/Dev/cioAssistant/components/dashboard/ai-intake-panel.tsx).
 - Ajouter:
   - composant `assistant-message-list`
   - composant `assistant-composer`

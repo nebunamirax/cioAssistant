@@ -17,7 +17,6 @@ app/
     projects/
     vendors/
     contracts/
-    support-services/
     budget-items/
     communications/
     meeting-notes/
@@ -87,7 +86,6 @@ docs/
 - `GET|PATCH|DELETE /api/vendors/[id]`
 - `GET|POST /api/contracts`
 - `GET|PATCH|DELETE /api/contracts/[id]`
-- `GET /api/support-services`
 - `GET|POST /api/budget-items`
 - `GET|PATCH|DELETE /api/budget-items/[id]`
 - `GET|POST /api/communications`

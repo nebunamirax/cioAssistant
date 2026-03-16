@@ -61,7 +61,7 @@
   - transcription
   - synthèse
   - extraction des actions et décisions
-  - état actuel: cas cible non encore implémenté
+  - état actuel: workbench livré, avec saisie brute, génération de brouillon IA et entrée audio locale
 
 ## Paramètres applicatifs
 - Les paramètres UI sont regroupés dans `/settings`.
@@ -150,7 +150,7 @@
   - extraction ciblée par étape
   - shortlist projet injectée en contexte
   - revue manuelle assistée
-- La transcription / synthèse audio reste un axe futur.
+- La transcription audio locale est déjà intégrée au module Réunions; l’extension future porte surtout sur un usage plus transverse dans l’assistant principal.
 
 ## Stratégie Outlook
 - Connecteur isolé sous `app/api/integrations/outlook/*`.
