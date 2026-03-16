@@ -24,14 +24,30 @@ function shouldAutoDiscoverEmbeddedModel() {
 }
 
 function loadEmbeddedAddonModule() {
-  const globalOverride = (globalThis as { __CIO_EMBEDDED_WHISPER_ADDON__?: EmbeddedAddonModule }).__CIO_EMBEDDED_WHISPER_ADDON__;
+  const globalOverride =
+    (globalThis as { __CIO_EMBEDDED_WHISPER_ADDON__?: EmbeddedAddonModule }).__CIO_EMBEDDED_WHISPER_ADDON__
+    || (global as typeof globalThis & { __CIO_EMBEDDED_WHISPER_ADDON__?: EmbeddedAddonModule }).__CIO_EMBEDDED_WHISPER_ADDON__;
 
   if (globalOverride) {
     return globalOverride;
   }
 
   const requireFn = eval("require") as (id: string) => unknown;
-  return requireFn(EMBEDDED_ADDON_ENTRYPOINT) as EmbeddedAddonModule;
+
+  if (process.env.VITEST || process.env.NODE_ENV === "test") {
+    return requireFn("@kutalia/whisper-node-addon") as EmbeddedAddonModule;
+  }
+
+  try {
+    return requireFn(EMBEDDED_ADDON_ENTRYPOINT) as EmbeddedAddonModule;
+  } catch (entrypointError) {
+    try {
+      return requireFn("@kutalia/whisper-node-addon") as EmbeddedAddonModule;
+    } catch {
+      const message = entrypointError instanceof Error ? entrypointError.message : "unknown error";
+      throw new Error(`Failed to load native addon: ${message}`);
+    }
+  }
 }
 
 function getFileExtension(fileName: string) {

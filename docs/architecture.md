@@ -7,6 +7,18 @@
 - Les modules principaux privilégient un affichage dense de type workbench: entête de synthèse, filtres, table de navigation, panneau d'édition et panneau de contexte sur la même page.
 - La page `/` est désormais un assistant conversationnel unique, servant d'entrée transverse aux modules métier.
 
+## Stratégie mobile
+- La cible mobile du MVP est une application web responsive, pas une application native iOS/Android.
+- La base Next.js existante doit être étendue pour supporter un usage terrain et consultation rapide sur smartphone sans dupliquer la logique métier dans un second client.
+- Le comportement attendu sur petit écran:
+  - sidebar remplacée par un header compact et un menu ouvrable
+  - workbenches liste + panneau latéral réorganisés en pile verticale ou en panneau plein écran
+  - tables denses converties en listes ou cartes lisibles
+  - filtres repliables pour limiter l'encombrement
+  - chat et saisie rapide traités comme parcours mobile prioritaires
+- Une couche PWA légère peut être ajoutée après le responsive pour permettre l'installation sur écran d'accueil et une expérience plus proche d'une app.
+- Le natif n'est pas retenu à ce stade. Il ne deviendra pertinent qu'en cas de besoin explicite de capacités device avancées, notifications riches, offline robuste ou distribution store.
+
 ## Séparation UI / API / services
 - UI: `app/*` + `components/*`.
 - API: `app/api/*`.

@@ -53,6 +53,7 @@ describe("meeting-audio-transcription-service", () => {
     delete process.env.AI_AUDIO_TRANSCRIPTION_EMBEDDED_THREADS;
     delete process.env.AI_AUDIO_TRANSCRIPTION_EMBEDDED_USE_GPU;
     process.env.AI_AUDIO_TRANSCRIPTION_AUTO_DISCOVER = "false";
+    process.env.VITEST = "true";
 
     loadAppSettingsSyncMock.mockReset();
     execMock.mockReset();
@@ -104,6 +105,9 @@ describe("meeting-audio-transcription-service", () => {
       transcription: [["Bonjour", "tout le monde"]]
     });
     (globalThis as { __CIO_EMBEDDED_WHISPER_ADDON__?: unknown }).__CIO_EMBEDDED_WHISPER_ADDON__ = {
+      transcribe: transcribeAddonMock
+    };
+    (global as typeof globalThis & { __CIO_EMBEDDED_WHISPER_ADDON__?: unknown }).__CIO_EMBEDDED_WHISPER_ADDON__ = {
       transcribe: transcribeAddonMock
     };
     mkdtempMock.mockResolvedValue("/tmp/meeting-audio-embedded-test");

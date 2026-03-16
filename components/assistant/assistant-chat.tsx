@@ -70,6 +70,14 @@ type AssistantApiResponse = {
   }>;
 };
 
+function InfoDot({ label }: { label: string }) {
+  return (
+    <span className="info-dot" title={label} aria-label={label}>
+      i
+    </span>
+  );
+}
+
 const welcomeMessage: ChatMessage = {
   id: "assistant-welcome",
   role: "assistant",
@@ -204,7 +212,7 @@ function AssistantComposer({
 
   return (
     <form
-      className="assistant-composer"
+      className="assistant-composer assistant-composer-primary"
       onSubmit={async (event) => {
         event.preventDefault();
         const file = fileInputRef.current?.files?.[0] ?? null;
@@ -220,11 +228,16 @@ function AssistantComposer({
       }}
     >
       <div className="space-y-2">
-        <label className="field-label">Message</label>
+        <div className="flex items-center justify-between gap-2">
+          <label className="field-label !mb-0">Message</label>
+          <span className="rounded-full bg-white/70 px-2.5 py-1 text-[11px] font-medium text-slate-600">
+            Texte ou document
+          </span>
+        </div>
         <textarea
           value={text}
           onChange={(event) => setText(event.target.value)}
-          className="field-textarea min-h-[136px] border-0 bg-white/80"
+          className="field-textarea min-h-[168px] border-0 bg-white/95"
           placeholder="Exemple: cree le projet migration SSO, ajoute trois actions de suivi et lie-les au fournisseur Okta..."
         />
       </div>
@@ -242,7 +255,7 @@ function AssistantComposer({
             {fileName ? `Pret a envoyer: ${fileName}` : "Formats supportes: txt, md, csv, json, eml, pdf, docx."}
           </p>
         </div>
-        <button disabled={busy} className="button-primary">
+        <button disabled={busy} className="button-primary min-w-[140px]">
           {busy ? "Analyse en cours..." : "Envoyer"}
         </button>
       </div>
@@ -336,80 +349,97 @@ export function AssistantChat() {
 
   return (
     <section className="assistant-shell">
-      <div className="assistant-shell-header">
-        <div className="space-y-2">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Assistant principal</p>
-          <h1 className="text-3xl font-semibold text-slate-950">Chat operateur</h1>
-          <p className="max-w-3xl text-sm text-slate-600">
-            Une seule surface pour decrire une demande, joindre un document et voir les creations multi-modules sans quitter l'accueil.
-          </p>
-        </div>
-        <div className="assistant-shell-stats">
-          <div className="assistant-shell-stat">
-            <p className="workbench-kpi-label">Messages traites</p>
-            <p className="workbench-kpi-value">{Math.max(messages.length - 1, 0)}</p>
+      <section className="workbench-panel space-y-4">
+        <div className="space-y-3 border-b border-slate-200 pb-4">
+          <div className="space-y-1.5">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">Assistant principal</p>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-semibold text-slate-950 sm:text-2xl">Que veux-tu faire ?</h1>
+              <InfoDot label="Decris une demande ou joins un document. L'assistant propose ensuite creations ou revue." />
+            </div>
           </div>
-          <div className="assistant-shell-stat">
-            <p className="workbench-kpi-label">Retours created</p>
-            <p className="workbench-kpi-value">{Math.max(transcriptCount, 0)}</p>
+          <div className="flex flex-wrap gap-2">
+            <div className="rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">Messages</p>
+              <p className="mt-1 text-base font-semibold text-slate-950">{Math.max(messages.length - 1, 0)}</p>
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">Created</p>
+              <p className="mt-1 text-base font-semibold text-slate-950">{Math.max(transcriptCount, 0)}</p>
+            </div>
           </div>
-        </div>
-      </div>
-
-      <div className="grid gap-5 xl:grid-cols-[1.35fr_0.9fr]">
-        <div className="workbench-panel">
-          <AssistantMessageList messages={messages} />
         </div>
 
         <div className="space-y-4">
-          <section className="workbench-panel space-y-3">
-            <div className="space-y-1">
-              <h2 className="text-xl font-semibold text-slate-950">Composer</h2>
-              <p className="panel-caption">
-                Le shell du lot 1 gere texte, document et restitution conversationnelle avec statuts d&apos;operations.
-              </p>
+          <section className="rounded-[22px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(248,250,252,0.95),rgba(255,255,255,1))] p-3 shadow-sm sm:p-4">
+            <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-semibold text-slate-950">Envoyer une demande</h2>
+                <InfoDot label="Accepte texte libre, PDF, DOCX et autres documents supportes." />
+              </div>
+              <div className="flex flex-wrap gap-2 text-xs text-slate-500">
+                <span className="rounded-full bg-white px-2.5 py-1">Texte libre</span>
+                <span className="rounded-full bg-white px-2.5 py-1">PDF</span>
+                <span className="rounded-full bg-white px-2.5 py-1">DOCX</span>
+              </div>
             </div>
             <AssistantComposer busy={busy} onSubmit={submit} />
-            {error ? <p className="text-sm text-red-600">{error}</p> : null}
+            {error ? <p className="mt-3 text-sm text-red-600">{error}</p> : null}
           </section>
 
-          <section className="workbench-panel space-y-3">
-            <h2 className="text-lg font-semibold text-slate-950">Statuts retournes</h2>
-            <div className="space-y-3">
-              <AssistantOperationResult
-                operation={{
-                  id: "sample-processing",
-                  module: "assistant",
-                  title: "Analyse en cours",
-                  status: "processing",
-                  href: null,
-                  description: "Le modele route le contenu et prepare les operations."
-                }}
-              />
-              <AssistantOperationResult
-                operation={{
-                  id: "sample-created",
-                  module: "projects",
-                  title: "Creation terminee",
-                  status: "created",
-                  href: null,
-                  description: "Les entrees creees restent visibles ici avec leurs liens."
-                }}
-              />
-              <AssistantOperationResult
-                operation={{
-                  id: "sample-review",
-                  module: "contracts",
-                  title: "Revue manuelle",
-                  status: "review",
-                  href: "/ai-reviews",
-                  description: "Les cas ambigus sont rediriges vers la file de revue."
-                }}
-              />
-            </div>
-          </section>
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1.3fr),320px]">
+            <section className="rounded-[20px] border border-slate-200/80 bg-slate-50/50 p-3 sm:p-4">
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <h2 className="text-sm font-semibold text-slate-950">Conversation</h2>
+                  <InfoDot label="Historique du fil courant avec resume et operations detectees." />
+                </div>
+                <span className="rounded-full bg-white px-2.5 py-1 text-xs text-slate-500">Flux principal</span>
+              </div>
+              <AssistantMessageList messages={messages} />
+            </section>
+
+            <section className="rounded-[20px] border border-slate-200/80 bg-white p-3 sm:p-4">
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm font-semibold text-slate-950">Retours possibles</h2>
+                <InfoDot label="Trois cas principaux: analyse, creation directe ou revue manuelle." />
+              </div>
+              <div className="mt-3 space-y-3">
+                <AssistantOperationResult
+                  operation={{
+                    id: "sample-processing",
+                    module: "assistant",
+                    title: "Analyse en cours",
+                    status: "processing",
+                    href: null,
+                    description: "Le modele route le contenu et prepare les operations."
+                  }}
+                />
+                <AssistantOperationResult
+                  operation={{
+                    id: "sample-created",
+                    module: "projects",
+                    title: "Creation terminee",
+                    status: "created",
+                    href: null,
+                    description: "Les entrees creees restent visibles ici avec leurs liens."
+                  }}
+                />
+                <AssistantOperationResult
+                  operation={{
+                    id: "sample-review",
+                    module: "contracts",
+                    title: "Revue manuelle",
+                    status: "review",
+                    href: "/ai-reviews",
+                    description: "Les cas ambigus sont rediriges vers la file de revue."
+                  }}
+                />
+              </div>
+            </section>
+          </div>
         </div>
-      </div>
+      </section>
     </section>
   );
 }

@@ -11,6 +11,7 @@
 | Contrats | CRUD complet, filtres statut/renouvellement/échéance, workbench dense liste + édition + synthèse contractuelle | implemented | Prisma, Zod |
 | Budget | CRUD lignes budgétaires, filtres de base, workbench dense liste + édition + rattachements métier + synthèse d'écart | implemented | Prisma, CSV |
 | Communications | Brouillons + export + templates de communication à inputs structurés + workbench dense liste + rédaction + synthèse | implemented | Prisma |
+| Mobile | Support smartphone via responsive web prioritaire, adaptation des workbenches desktop, PWA légère en second temps; application native exclue du MVP | planned | Next.js, Tailwind, UX |
 | Outlook | Intégration Microsoft Graph | planned | OAuth Microsoft |
 | Notion | Import/export optionnel | planned | Notion API |
 | IA transverse | Assistant de chat, planner sémantique, routage multi-modules, extraction ciblée par module, revue manuelle assistée, shortlist projet en contexte, priorité texte/PDF contrats | in progress | Provider IA, Prisma |

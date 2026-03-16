@@ -11,8 +11,8 @@ function splitLocalPlanSteps(text: string): IntakeExecutionPlan["steps"] {
 
   if (parts.length <= 1) {
     const decision = analyzeIntakeText(normalized, null);
-    const module = decision.primaryModule ?? (decision.toolCalls[0] ? toolToModule(decision.toolCalls[0].tool) : "actions");
-    return [{ id: "step_1", module, action: "create", sourceText: normalized, dependsOn: null, relation: null }];
+    const targetModule = decision.primaryModule ?? (decision.toolCalls[0] ? toolToModule(decision.toolCalls[0].tool) : "actions");
+    return [{ id: "step_1", module: targetModule, action: "create", sourceText: normalized, dependsOn: null, relation: null }];
   }
 
   const steps: IntakeExecutionPlan["steps"] = [];
@@ -21,21 +21,21 @@ function splitLocalPlanSteps(text: string): IntakeExecutionPlan["steps"] {
   parts.forEach((part, index) => {
     const stepId = `step_${index + 1}`;
     const decision = analyzeIntakeText(part, null);
-    const module = decision.primaryModule ?? (decision.toolCalls[0] ? toolToModule(decision.toolCalls[0].tool) : "actions");
+    const targetModule = decision.primaryModule ?? (decision.toolCalls[0] ? toolToModule(decision.toolCalls[0].tool) : "actions");
 
-    if (module === "projects") {
+    if (targetModule === "projects") {
       projectStepId = stepId;
-      steps.push({ id: stepId, module, action: "create", sourceText: part, dependsOn: null, relation: null });
+      steps.push({ id: stepId, module: targetModule, action: "create", sourceText: part, dependsOn: null, relation: null });
       return;
     }
 
     steps.push({
       id: stepId,
-      module,
+      module: targetModule,
       action: "create",
       sourceText: part,
-      dependsOn: module === "actions" ? projectStepId : null,
-      relation: module === "actions" && projectStepId ? "project_of" : null
+      dependsOn: targetModule === "actions" ? projectStepId : null,
+      relation: targetModule === "actions" && projectStepId ? "project_of" : null
     });
   });
 

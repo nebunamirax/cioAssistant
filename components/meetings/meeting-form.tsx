@@ -488,261 +488,285 @@ export function MeetingForm({
   return (
     <form onSubmit={submit} className="form-stack">
       {showHeader && <h2 className="panel-title">{mode === "create" ? "Nouvelle reunion" : "Modifier la reunion"}</h2>}
-      <section className="form-section space-y-3">
-        <div>
-          <h3 className="form-section-title">Point de depart</h3>
-          <p className="form-section-caption">Commence par un brut texte, un fichier audio ou une note vocale. La transcription alimente ensuite le champ brut avant la synthese.</p>
-        </div>
-        <div className="meeting-audio-shell">
-          <div className="meeting-audio-header">
-            <div>
-              <p className="meeting-audio-title">Audio de reunion</p>
-              <p className="meeting-audio-copy">Importe un fichier audio ou enregistre une note vocale depuis l'ordinateur. La transcription est ajoutee au compte-rendu brut sans sauvegarde immediate.</p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="audio/*,.mp3,.m4a,.wav,.webm,.ogg,.mp4"
-                onChange={handleAudioFileChange}
-                className="hidden"
-              />
-              <button type="button" onClick={() => fileInputRef.current?.click()} disabled={transcribing || recording} className="button-secondary">
-                Importer un audio
-              </button>
-              <button type="button" onClick={recording ? stopRecording : startRecording} disabled={transcribing} className="button-secondary">
-                {recording ? "Arreter l'enregistrement" : "Enregistrer une note vocale"}
-              </button>
-            </div>
-          </div>
-          <p className="field-hint">La transcription audio utilise d'abord le moteur embarque dans l'app si configure, puis whisper.cpp, puis une commande locale personnalisee, et enfin un endpoint compatible audio local. Formats acceptes: MP3, M4A, WAV, WEBM, OGG, MP4.</p>
-          {(transcribing || audioPreviewUrl || audioLabel) && (
-            <div className="meeting-audio-status">
+      <section className="space-y-4">
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr),360px]">
+          <section className="form-section space-y-3">
+            <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="meeting-audio-status-label">{transcribing ? "Transcription en cours..." : "Dernier audio charge"}</p>
-                <p className="meeting-audio-status-copy">{audioLabel ?? "Audio en attente de transcription"}</p>
+                <h3 className="form-section-title">Brut et synthese</h3>
+                <p className="form-section-caption">Le texte source reste central. Audio et generation sont des accelerateurs, pas une colonne a part.</p>
               </div>
-              {audioPreviewUrl && <audio controls src={audioPreviewUrl} className="w-full md:w-[260px]" />}
+              <button type="button" onClick={() => void generateDraft()} disabled={generating || transcribing || !rawContent.trim()} className="button-secondary">
+                {generating ? "Generation..." : "Generer"}
+              </button>
             </div>
-          )}
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={generateDraftFromAudio}
-              disabled={transcribing || generating || (!pendingAudioFile && (!audioLabel || !rawContent.trim()))}
-              className="button-primary"
-            >
-              {generating ? "Generation..." : "Transcrire et generer la synthese"}
-            </button>
-            {pendingAudioFile && <p className="field-hint">Audio pret. Le clic lance maintenant la transcription puis la synthese.</p>}
-            {!pendingAudioFile && hasFreshTranscript && <p className="field-hint">La transcription vient d'etre ajoutee au brut. Lance la synthese directement depuis l'audio si tu veux enchainer.</p>}
-          </div>
-        </div>
-        <div>
-          <label className="field-label">Compte-rendu brut</label>
-          <textarea
-            value={rawContent}
-            onChange={(event) => setRawContent(event.target.value)}
-            rows={12}
-            required
-            placeholder="Colle ici tes notes de reunion, ton verbatim ou un compte-rendu brut. Ensuite lance la baguette magique pour generer la synthese."
-            className="field-textarea min-h-[240px]"
-          />
-        </div>
-        <div className="meeting-draft-toolbar">
-          <div>
-            <p className="meeting-draft-toolbar-title">Baguette magique</p>
-            <p className="meeting-draft-toolbar-copy">Genere une synthese exploitable et extrait actions, decisions, risques et echeances sans enregistrer tout de suite.</p>
-          </div>
-          <button type="button" onClick={() => void generateDraft()} disabled={generating || transcribing || !rawContent.trim()} className="button-secondary">
-            {generating ? "Generation..." : "Generer la synthese"}
-          </button>
-        </div>
-      </section>
-      <section className="form-section space-y-3">
-        <div>
-          <h3 className="form-section-title">Cadre de la reunion</h3>
-          <p className="form-section-caption">Ajuste les metadonnees avant d'enregistrer la note definitive.</p>
-        </div>
-        <div className="grid gap-3 md:grid-cols-2">
-          <div className="md:col-span-2">
-            <label className="field-label">Titre</label>
-            <input
-              value={title}
-              onChange={(event) => setTitle(event.target.value)}
-              placeholder="Ex: Codir du lundi"
-              required
-              className="field-input"
-            />
-          </div>
-          <div>
-            <label className="field-label">Date et heure</label>
-            <input
-              type="datetime-local"
-              value={meetingDate}
-              onChange={(event) => setMeetingDate(event.target.value)}
-              required
-              className="field-input"
-            />
-          </div>
-          <div>
-            <label className="field-label">Projet</label>
-            <select value={projectId} onChange={(event) => setProjectId(event.target.value)} className="field-select">
-              <option value="">Aucun projet</option>
-              {projectOptions.map((project) => (
-                <option key={project.id} value={project.id}>
-                  {project.title}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-        <div>
-          <label className="field-label">Participants</label>
-          <textarea
-            value={attendees}
-            onChange={(event) => setAttendees(event.target.value)}
-            placeholder={"Une ligne par participant\nDSI\nRSSI\nMOA"}
-            rows={4}
-            className="field-textarea"
-          />
-          <p className="field-hint">Une ligne par nom ou role.</p>
-        </div>
-      </section>
-      <section className="form-section space-y-3">
-        <div>
-          <h3 className="form-section-title">Synthese generee / ajustee</h3>
-          <p className="form-section-caption">Relis et retouche librement ce que la generation a propose avant sauvegarde.</p>
-        </div>
-        <div className="meeting-generated-shell">
-          <label className="field-label">Synthese</label>
-          <textarea
-            value={summary}
-            onChange={(event) => setSummary(event.target.value)}
-            rows={6}
-            className="field-textarea"
-          />
-        </div>
-      </section>
-      <section className="form-section space-y-3">
-        <div>
-          <h3 className="form-section-title">Suites a donner</h3>
-          <p className="form-section-caption">La generation peut pre-remplir ces blocs, mais tu gardes la main avant enregistrement.</p>
-        </div>
-        <div className="meeting-actions-header">
-          <div>
-            <p className="meeting-actions-title">Actions issues du compte-rendu</p>
-            <p className="meeting-actions-copy">Ajuste l'intitule, le responsable et l'echeance avant de les transformer en vraies actions.</p>
-          </div>
-          <div className="flex gap-2">
-            <button type="button" onClick={addActionDraft} className="button-secondary">
-              Ajouter une action
-            </button>
-            <button
-              type="button"
-              onClick={createExtractedActions}
-              disabled={creatingActions || extractedActions.filter((action) => !action.createdActionId && action.title.trim().length >= 3).length === 0}
-              className="button-primary"
-            >
-              {creatingActions ? "Creation..." : "Creer les actions"}
-            </button>
-          </div>
-        </div>
-        <div className="space-y-3">
-          {extractedActions.map((action, index) => (
-            <div key={`${index}-${action.createdActionId ?? "draft"}`} className="meeting-action-card">
-              <div className="meeting-action-card-header">
-                <div>
-                  <p className="meeting-action-card-title">Action {index + 1}</p>
-                  <p className="meeting-action-card-status">
-                    {action.createdActionId ? `Creee (${action.createdActionId})` : "Brouillon non cree"}
-                  </p>
-                </div>
-                <button type="button" onClick={() => removeActionDraft(index)} className="button-secondary">
-                  Retirer
-                </button>
+            <div>
+              <label className="field-label">Compte-rendu brut</label>
+              <textarea
+                value={rawContent}
+                onChange={(event) => setRawContent(event.target.value)}
+                rows={14}
+                required
+                placeholder="Colle ici tes notes de reunion, ton verbatim ou un compte-rendu brut."
+                className="field-textarea min-h-[280px]"
+              />
+            </div>
+            <div className="meeting-draft-toolbar">
+              <div>
+                <p className="meeting-draft-toolbar-title">Baguette magique</p>
+                <p className="meeting-draft-toolbar-copy">Genere une synthese exploitable et pre-remplit actions, decisions, risques et echeances.</p>
               </div>
-              <div className="grid gap-3 md:grid-cols-2">
-                <div className="md:col-span-2">
-                  <label className="field-label">Intitule</label>
+              <button type="button" onClick={() => void generateDraft()} disabled={generating || transcribing || !rawContent.trim()} className="button-primary">
+                {generating ? "Generation..." : "Lancer l'analyse"}
+              </button>
+            </div>
+          </section>
+
+          <section className="space-y-4">
+            <section className="form-section space-y-3">
+              <div>
+                <h3 className="form-section-title">Cadre</h3>
+                <p className="form-section-caption">Le minimum utile pour retrouver et rattacher la reunion.</p>
+              </div>
+              <div className="space-y-3">
+                <div>
+                  <label className="field-label">Titre</label>
                   <input
-                    value={action.title}
-                    onChange={(event) => updateActionDraft(index, { title: event.target.value })}
+                    value={title}
+                    onChange={(event) => setTitle(event.target.value)}
+                    placeholder="Ex: Codir du lundi"
+                    required
                     className="field-input"
                   />
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className="field-label">Date et heure</label>
+                    <input
+                      type="datetime-local"
+                      value={meetingDate}
+                      onChange={(event) => setMeetingDate(event.target.value)}
+                      required
+                      className="field-input"
+                    />
+                  </div>
+                  <div>
+                    <label className="field-label">Projet</label>
+                    <select value={projectId} onChange={(event) => setProjectId(event.target.value)} className="field-select">
+                      <option value="">Aucun projet</option>
+                      {projectOptions.map((project) => (
+                        <option key={project.id} value={project.id}>
+                          {project.title}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
                 <div>
-                  <label className="field-label">Responsable</label>
-                  <input
-                    value={action.ownerName ?? ""}
-                    onChange={(event) => updateActionDraft(index, { ownerName: event.target.value })}
-                    placeholder="Ex: Max Martin"
-                    className="field-input"
-                  />
-                </div>
-                <div>
-                  <label className="field-label">Echeance</label>
-                  <input
-                    type="datetime-local"
-                    value={action.dueDate ? new Date(action.dueDate).toISOString().slice(0, 16) : ""}
-                    onChange={(event) => updateActionDraft(index, { dueDate: event.target.value ? new Date(event.target.value).toISOString() : null })}
-                    className="field-input"
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <label className="field-label">Notes</label>
+                  <label className="field-label">Participants</label>
                   <textarea
-                    value={action.notes ?? ""}
-                    onChange={(event) => updateActionDraft(index, { notes: event.target.value })}
-                    rows={3}
+                    value={attendees}
+                    onChange={(event) => setAttendees(event.target.value)}
+                    placeholder={"Une ligne par participant\nDSI\nRSSI\nMOA"}
+                    rows={4}
                     className="field-textarea"
                   />
                 </div>
               </div>
-            </div>
-          ))}
-          {extractedActions.length === 0 && (
-            <div className="meeting-empty-state">
-              Aucune action extraite pour l'instant. Lance la generation ou ajoute une action manuellement.
-            </div>
-          )}
-          {!currentMeetingNoteId && (
-            <p className="field-hint">Si la reunion n'existe pas encore, le clic sur creation enregistre d'abord la reunion puis cree les actions.</p>
-          )}
+            </section>
+
+            <section className="form-section space-y-3">
+              <div>
+                <h3 className="form-section-title">Audio</h3>
+                <p className="form-section-caption">Importe ou enregistre, puis reinjecte la transcription dans le brut.</p>
+              </div>
+              <div className="meeting-audio-shell">
+                <div className="meeting-audio-header">
+                  <div className="flex flex-wrap gap-2">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="audio/*,.mp3,.m4a,.wav,.webm,.ogg,.mp4"
+                      onChange={handleAudioFileChange}
+                      className="hidden"
+                    />
+                    <button type="button" onClick={() => fileInputRef.current?.click()} disabled={transcribing || recording} className="button-secondary">
+                      Importer
+                    </button>
+                    <button type="button" onClick={recording ? stopRecording : startRecording} disabled={transcribing} className="button-secondary">
+                      {recording ? "Arreter" : "Enregistrer"}
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={generateDraftFromAudio}
+                    disabled={transcribing || generating || (!pendingAudioFile && (!audioLabel || !rawContent.trim()))}
+                    className="button-primary"
+                  >
+                    {generating ? "Generation..." : "Transcrire puis analyser"}
+                  </button>
+                </div>
+                    <p className="field-hint">Formats: MP3, M4A, WAV, WEBM, OGG, MP4.</p>
+                {(transcribing || audioPreviewUrl || audioLabel) && (
+                  <div className="meeting-audio-status">
+                    <div>
+                      <p className="meeting-audio-status-label">{transcribing ? "Transcription en cours..." : "Dernier audio"}</p>
+                      <p className="meeting-audio-status-copy">{audioLabel ?? "Audio en attente de transcription"}</p>
+                    </div>
+                    {audioPreviewUrl ? <audio controls src={audioPreviewUrl} className="w-full md:w-[220px]" /> : null}
+                  </div>
+                )}
+                {pendingAudioFile ? <p className="field-hint">Audio pret. Le clic lancera transcription puis synthese.</p> : null}
+                {!pendingAudioFile && hasFreshTranscript ? <p className="field-hint">La transcription vient d&apos;etre ajoutee au brut.</p> : null}
+              </div>
+            </section>
+          </section>
         </div>
-        <div className="grid gap-3 md:grid-cols-2">
-          <div className="meeting-generated-shell">
-            <label className="field-label">Decisions</label>
+
+        <section className="form-section space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h3 className="form-section-title">Synthese</h3>
+              <p className="form-section-caption">Relis, coupe, reformule. Cette zone doit rester beaucoup plus simple que le brut.</p>
+            </div>
+            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs text-slate-600">
+              {summary.trim() ? "Pre-remplie" : "Vide"}
+            </span>
+          </div>
+          <textarea
+            value={summary}
+            onChange={(event) => setSummary(event.target.value)}
+            rows={7}
+            className="field-textarea"
+          />
+        </section>
+
+        <section className="form-section space-y-3">
+          <div className="meeting-actions-header">
+            <div>
+              <p className="meeting-actions-title">Actions a sortir du compte-rendu</p>
+              <p className="meeting-actions-copy">Travaille les brouillons ici, puis pousse-les en vraies actions quand c&apos;est propre.</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" onClick={addActionDraft} className="button-secondary">
+                Ajouter
+              </button>
+              <button
+                type="button"
+                onClick={createExtractedActions}
+                disabled={creatingActions || extractedActions.filter((action) => !action.createdActionId && action.title.trim().length >= 3).length === 0}
+                className="button-primary"
+              >
+                {creatingActions ? "Creation..." : "Creer les actions"}
+              </button>
+            </div>
+          </div>
+          <div className="space-y-3">
+            {extractedActions.map((action, index) => (
+              <div key={`${index}-${action.createdActionId ?? "draft"}`} className="meeting-action-card">
+                <div className="meeting-action-card-header">
+                  <div>
+                    <p className="meeting-action-card-title">Action {index + 1}</p>
+                    <p className="meeting-action-card-status">
+                      {action.createdActionId ? `Creee (${action.createdActionId})` : "Brouillon"}
+                    </p>
+                  </div>
+                  <button type="button" onClick={() => removeActionDraft(index)} className="button-secondary">
+                    Retirer
+                  </button>
+                </div>
+                <div className="grid gap-3 md:grid-cols-[minmax(0,1fr),180px,180px]">
+                  <div>
+                    <label className="field-label">Intitule</label>
+                    <input
+                      value={action.title}
+                      onChange={(event) => updateActionDraft(index, { title: event.target.value })}
+                      className="field-input"
+                    />
+                  </div>
+                  <div>
+                    <label className="field-label">Responsable</label>
+                    <input
+                      value={action.ownerName ?? ""}
+                      onChange={(event) => updateActionDraft(index, { ownerName: event.target.value })}
+                      placeholder="Ex: Max Martin"
+                      className="field-input"
+                    />
+                  </div>
+                  <div>
+                    <label className="field-label">Echeance</label>
+                    <input
+                      type="datetime-local"
+                      value={action.dueDate ? new Date(action.dueDate).toISOString().slice(0, 16) : ""}
+                      onChange={(event) => updateActionDraft(index, { dueDate: event.target.value ? new Date(event.target.value).toISOString() : null })}
+                      className="field-input"
+                    />
+                  </div>
+                  <div className="md:col-span-3">
+                    <label className="field-label">Notes</label>
+                    <textarea
+                      value={action.notes ?? ""}
+                      onChange={(event) => updateActionDraft(index, { notes: event.target.value })}
+                      rows={2}
+                      className="field-textarea"
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+            {extractedActions.length === 0 ? (
+              <div className="meeting-empty-state">
+                Aucune action extraite pour l&apos;instant. Lance la generation ou ajoute une action manuellement.
+              </div>
+            ) : null}
+            {!currentMeetingNoteId ? (
+              <p className="field-hint">Si la reunion n&apos;existe pas encore, la creation des actions sauvegarde d&apos;abord la reunion.</p>
+            ) : null}
+          </div>
+        </section>
+
+        <section className="grid gap-4 xl:grid-cols-3">
+          <section className="form-section space-y-3">
+            <div>
+              <h3 className="form-section-title">Decisions</h3>
+              <p className="form-section-caption">Ce qui a ete tranche.</p>
+            </div>
             <textarea
               value={extractedDecisions}
               onChange={(event) => setExtractedDecisions(event.target.value)}
-              rows={5}
+              rows={6}
               className="field-textarea"
             />
-          </div>
-          <div className="meeting-generated-shell">
-            <label className="field-label">Risques</label>
+          </section>
+          <section className="form-section space-y-3">
+            <div>
+              <h3 className="form-section-title">Risques</h3>
+              <p className="form-section-caption">Points de vigilance a garder visibles.</p>
+            </div>
             <textarea
               value={extractedRisks}
               onChange={(event) => setExtractedRisks(event.target.value)}
-              rows={5}
+              rows={6}
               className="field-textarea"
             />
-          </div>
-          <div className="meeting-generated-shell">
-            <label className="field-label">Echeances</label>
+          </section>
+          <section className="form-section space-y-3">
+            <div>
+              <h3 className="form-section-title">Echeances</h3>
+              <p className="form-section-caption">Dates utiles extraites du compte-rendu.</p>
+            </div>
             <textarea
               value={extractedDeadlines}
               onChange={(event) => setExtractedDeadlines(event.target.value)}
-              rows={5}
+              rows={6}
               className="field-textarea"
             />
-          </div>
-        </div>
+          </section>
+        </section>
       </section>
       {error && <p className="text-sm text-red-600">{error}</p>}
       <div className="form-actions">
-        <p className="form-actions-note">Le brut peut etre transforme avant sauvegarde, mais l'enregistrement reste toujours sous ton controle.</p>
+        <p className="form-actions-note">Le brut peut etre transforme avant sauvegarde, mais l&apos;enregistrement reste toujours sous ton controle.</p>
         <button disabled={loading || generating || creatingActions || transcribing || recording} className="button-primary">
           {loading ? (mode === "create" ? "Creation..." : "Enregistrement...") : mode === "create" ? "Creer la reunion" : "Enregistrer"}
         </button>
