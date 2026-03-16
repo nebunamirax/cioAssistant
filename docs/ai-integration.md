@@ -2,8 +2,9 @@
 
 ## Abstraction provider
 - Interface `AIProvider` unique.
-- Méthodes: `summarize`, `extract`, `classify`, `suggestProject`, `analyzeIntake`.
+- Méthodes actuelles: `planIntake`, `analyzeIntake`, `suggestDraft`, `summarize`, `extract`, `classify`, `suggestProject`.
 - Sélection du provider et du modèle via configuration runtime.
+- Cette couche alimente déjà le chat principal sur `/` via `POST /api/assistant/messages`.
 
 ## Mode IA locale
 - Provider `LocalAIProvider`.
@@ -19,21 +20,80 @@
 - Cible un endpoint `OpenAI-compatible`, utile pour des modèles locaux exposés via Ollama / LM Studio / passerelle interne.
 
 ## Types de tâches IA
+- Chat opérateur en langage naturel.
 - Résumé de contenu.
-- Extraction d’actions/décisions/risques/échéances.
-- Classification.
+- Extraction d’actions, décisions, risques, échéances et champs métier.
+- Classification / routage multi-modules.
 - Suggestion de rattachement projet.
-- Ingestion depuis la page principale: analyse d’un texte ou d’un document texte, détection des modules concernés, puis création directe d’entrées liées entre elles.
+- Extraction ciblée d’un brouillon pour un module choisi manuellement.
+- Transcription audio puis synthèse structurée.
 
-## Ingestion transverse
-- Point d’entrée principal: dashboard.
-- Entrées supportées: texte collé, documents texte, `PDF`, `DOCX`.
-- Les documents sont transformés en texte côté serveur avant passage au modèle.
-- L’analyse IA produit un plan de création pour les modules `Actions`, `Projets`, `Prestataires`, `Contrats`, `Budget`, `Communications`.
+## Assistant principal
+- Point d’entrée principal: home.
+- Forme UX actuelle: panneau de chat unique avec historique local, zone de saisie texte et upload document.
+- Entrées actuellement supportées: texte collé, documents texte, `PDF`, `DOCX`.
+- Audio micro et fichiers audio restent prévus mais ne sont pas encore implémentés dans l’UI ni dans le pipeline serveur.
+- Priorité produit: le texte et les documents textuels restent le premier cas d'usage.
+- Le système doit être performant sur:
+  - texte libre saisi ou collé
+  - emails transférés/collés
+  - `PDF` métiers, notamment les contrats
+- Les documents et fichiers audio doivent être transformés en texte côté serveur avant raisonnement métier.
+- Le pipeline actuel fait d’abord un call de planification sémantique pour:
+  - comprendre l’intention globale
+  - décomposer une demande en plusieurs étapes métier
+  - expliciter les dépendances entre étapes, par exemple une action qui dépend du projet créé juste avant
+- Ensuite, chaque étape est extraite séparément en brouillon métier structuré avant exécution.
+- Avant ce call, le serveur peut récupérer une shortlist de projets existants potentiellement pertinents.
+- Cette shortlist est injectée au modèle comme contexte de travail, avec `id`, `title`, `status`, `priority`.
+- Le but n’est pas un RAG lourd à base d’embeddings pour cette étape, mais un `retrieve-then-decide` pragmatique:
+  - recherche serveur simple sur les projets existants
+  - contexte court transmis au modèle
+  - choix d’un `projectId` uniquement si le match est suffisamment clair
+  - fallback revue manuelle si ambiguïté persistante
+- Le système doit accepter des commandes multi-entités, par exemple un projet avec plusieurs actions associées.
 - Les rattachements sont créés dans le bon ordre quand ils sont détectables: prestataire -> projet -> contrat -> budget / communication -> actions.
-- Si aucun module explicite n’est détecté, le fallback crée une action inbox afin de ne pas perdre l’information.
+- Le cas actuellement pris en charge explicitement par dépendance de plan est `project_of` pour rattacher une action au projet créé dans la même demande.
+- Si la confiance est suffisante, la création ou mise à jour est exécutée directement.
+- Si le routage est ambigu, la demande bascule en revue manuelle.
 
-## Validation utilisateur
-- Pour ce flux d’ingestion dashboard, la création est directe afin d’accélérer la capture.
-- Le retour UI doit expliciter les modules ciblés et les entrées créées.
-- Les autres usages IA peuvent rester en mode suggestion si le flux le nécessite.
+## Rattachement projet
+- Un rattachement automatique d’action vers un projet existant ne doit pas dépendre d’un nom “magique” codé en dur.
+- Le flux recommandé est:
+  - récupérer les meilleurs candidats projet à partir du texte entrant
+  - les donner au modèle dans le contexte
+  - laisser le modèle renseigner `projectId` si un candidat est clairement visé
+  - compléter côté serveur par une règle de rattachement simple quand un seul projet candidat est mentionné textuellement
+- Ce mécanisme couvre les cas simples rapidement sans introduire une stack vectorielle complète.
+- Si le volume de projets augmente fortement ou si les formulations deviennent trop indirectes, une étape suivante pourra ajouter embeddings et recherche sémantique.
+
+## Cas prioritaire contrats PDF
+- Dépôt d'un contrat en `PDF` depuis le chat principal.
+- Extraction attendue:
+  - titre du contrat
+  - prestataire / fournisseur
+  - dates de début et de fin
+  - type de contrat
+  - mode de renouvellement
+  - montant planifié si présent
+  - échéances et actions de suivi
+- Le résultat peut produire plusieurs opérations liées:
+  - `create_vendor`
+  - `create_contract`
+  - `create_budget_item`
+  - `create_action`
+- Si certaines informations sont ambiguës, le contrat doit partir en revue avec les champs déjà préremplis.
+
+## Revue manuelle assistée
+- Si l’identification initiale n’est pas assez fiable, aucune création arbitraire ne doit être forcée.
+- La revue manuelle doit permettre de sélectionner le module puis de relancer une extraction IA ciblée des champs du module choisi.
+- Les données déjà explicites dans le texte source, comme dates ou montants, doivent rester récupérables même si le premier routage échoue.
+- Cette logique doit aussi s'appliquer aux `PDF` de contrats: même si la création auto échoue, les dates, montants, fournisseur et intitulé doivent rester récupérables dans le brouillon.
+
+## Réunions et audio
+- Le micro et l’upload audio sont des entrées prévues, pas encore livrées.
+- Les usages cibles restent:
+  - transcription brute
+  - synthèse de réunion
+  - extraction d’actions, décisions, risques, points bloquants et échéances
+  - création ou préremplissage de notes de réunion, actions et communications de suivi

@@ -1,4 +1,5 @@
 import { loadAppSettingsSync } from "@/lib/settings/service";
+import type { AppSettings } from "@/lib/settings/schema";
 
 export type AIProviderMode = "local" | "openai" | "compatible";
 export type AIModelLocation = "local" | "cloud";
@@ -56,8 +57,8 @@ function uniqueModels(items: AIModelOption[]) {
   });
 }
 
-export function getAIConfiguration(): AIConfiguration {
-  const settings = loadAppSettingsSync();
+export function getAIConfiguration(settingsOverride?: AppSettings): AIConfiguration {
+  const settings = settingsOverride ?? loadAppSettingsSync();
   const rawMode = process.env.AI_PROVIDER_MODE?.toLowerCase();
   const providerMode: AIProviderMode = settings.ai.providerMode
     ?? (rawMode === "openai" ? "openai" : rawMode === "compatible" || rawMode === "external" ? "compatible" : "local");

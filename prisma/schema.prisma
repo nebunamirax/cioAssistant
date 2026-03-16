@@ -196,6 +196,28 @@ model AIJob {
   updatedAt      DateTime       @updatedAt
 }
 
+model AIIntakeReview {
+  id                 String   @id @default(cuid())
+  sourceName         String?
+  rawText            String
+  providerMode       String
+  providerLabel      String
+  providerModel      String
+  summary            String?
+  suggestedModulesJson String?
+  analysisJson       String?
+  status             String   @default("PENDING")
+  reviewReason       String?
+  selectedModule     String?
+  draftDataJson      String?
+  createdEntityType  String?
+  createdEntityId    String?
+  createdEntityHref  String?
+  reviewedAt         DateTime?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
 model Note {
   id         String   @id @default(cuid())
   title      String

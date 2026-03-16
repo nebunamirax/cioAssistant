@@ -5,6 +5,7 @@
 - API Routes sous `app/api`.
 - Layout racine avec sidebar pour la navigation.
 - Les modules principaux privilégient un affichage dense de type workbench: entête de synthèse, filtres, table de navigation, panneau d'édition et panneau de contexte sur la même page.
+- La page `/` est désormais un assistant conversationnel unique, servant d'entrée transverse aux modules métier.
 
 ## Séparation UI / API / services
 - UI: `app/*` + `components/*`.
@@ -25,6 +26,30 @@
 3. Service métier applique les règles.
 4. Service persiste via Prisma.
 5. API retourne JSON normalisé.
+
+## Flux assistant conversationnel
+1. L'utilisateur envoie un message texte ou un document.
+2. Le backend convertit l'entrée en texte exploitable.
+3. Le service d'ingestion IA planifie la demande de façon sémantique en une ou plusieurs étapes.
+4. Chaque étape est extraite séparément, puis les dépendances simples sont résolues, par exemple une action liée au projet créé dans la même demande.
+5. Si le niveau de confiance est suffisant, les opérations métier sont exécutées.
+6. Sinon, la demande va en revue manuelle, avec possibilité de second call IA ciblé après choix du module.
+7. Le chat retourne un compte-rendu lisible: actions effectuées, brouillons créés, ambiguïtés restantes.
+
+## Cas d'usage de référence
+- Texte direct:
+  - commande naturelle pour créer un projet, une ou plusieurs actions, un budget ou une communication.
+- PDF contrat:
+  - upload d'un contrat fournisseur
+  - OCR/extraction texte si nécessaire
+  - extraction contractuelle structurée
+  - création multi-modules ou revue assistée
+- Réunion:
+  - micro ou fichier audio
+  - transcription
+  - synthèse
+  - extraction des actions et décisions
+  - état actuel: cas cible non encore implémenté
 
 ## Paramètres applicatifs
 - Les paramètres UI sont regroupés dans `/settings`.
@@ -82,8 +107,15 @@
 
 ## Stratégie IA
 - Interface fournisseur unique (`AIProvider`).
-- Choix runtime entre local et API externe.
-- Résultats IA proposés comme suggestions manuelles.
+- Choix runtime entre provider API OpenAI et provider compatible OpenAI-like.
+- Le rôle d'orchestrateur est actuellement porté par `lib/services/ai-intake-service.ts`.
+- Le pipeline gère:
+  - planification sémantique de la demande
+  - routage multi-modules
+  - extraction ciblée par étape
+  - shortlist projet injectée en contexte
+  - revue manuelle assistée
+- La transcription / synthèse audio reste un axe futur.
 
 ## Stratégie Outlook
 - Connecteur isolé sous `app/api/integrations/outlook/*`.

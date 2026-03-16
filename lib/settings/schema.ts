@@ -2,16 +2,16 @@ import { z } from "zod";
 
 export const appSettingsSchema = z.object({
   ai: z.object({
-    providerMode: z.enum(["local", "openai", "compatible"]).default("local"),
+    providerMode: z.enum(["local", "openai", "compatible"]).default("compatible"),
     localModel: z.string().default("heuristic-v1"),
     localModels: z.string().default("heuristic-v1"),
     openAIApiKey: z.string().default(""),
     openAIModel: z.string().default(""),
     openAIModels: z.string().default(""),
-    compatibleBaseUrl: z.string().default(""),
+    compatibleBaseUrl: z.string().default("http://host.docker.internal:1234/v1"),
     compatibleApiKey: z.string().default(""),
-    compatibleModel: z.string().default(""),
-    compatibleModels: z.string().default("")
+    compatibleModel: z.string().default("mistralai/devstral-small-2507"),
+    compatibleModels: z.string().default("mistralai/devstral-small-2507")
   }).default({}),
   integrations: z.object({
     outlookEnabled: z.boolean().default(false),

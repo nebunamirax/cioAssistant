@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRef, useState } from "react";
 
 type IntakeResult = {
+  disposition: "created" | "review";
   sourceName: string | null;
   provider: {
     provider: string;
@@ -14,13 +15,23 @@ type IntakeResult = {
   };
   summary: string;
   modules: string[];
-  created: Array<{
-    module: string;
-    id: string;
-    title: string;
-    href: string;
-  }>;
-};
+} & (
+  | {
+      disposition: "created";
+      created: Array<{
+        module: string;
+        id: string;
+        title: string;
+        href: string;
+      }>;
+    }
+  | {
+      disposition: "review";
+      reviewId: string;
+      reviewReason: string;
+      selectedModule: string;
+    }
+);
 
 export function AIIntakePanel() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -74,7 +85,7 @@ export function AIIntakePanel() {
         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Ingestion IA</p>
         <h2 className="text-xl font-semibold text-slate-950">Ajoute un texte ou un document depuis l’accueil</h2>
         <p className="panel-caption">
-          L’IA analyse le contenu et crée directement les entrées dans les modules concernés. Formats supportés: `.txt`, `.md`, `.csv`, `.json`, `.eml`, `.pdf`, `.docx`.
+          L’IA analyse le contenu et crée directement les entrées dans les modules concernés. Si la demande reste ambiguë, elle part dans la file de revue manuelle. Formats supportés: `.txt`, `.md`, `.csv`, `.json`, `.eml`, `.pdf`, `.docx`.
         </p>
       </div>
 
@@ -102,7 +113,7 @@ export function AIIntakePanel() {
               <p className="field-hint">Les PDF et DOCX sont extraits côté serveur, puis routés par le provider IA actif.</p>
             </div>
             <button disabled={loading} className="button-primary">
-              {loading ? "Analyse en cours..." : "Analyser et créer"}
+              {loading ? "Analyse en cours..." : "Analyser"}
             </button>
           </div>
         </section>
@@ -113,7 +124,9 @@ export function AIIntakePanel() {
       {result ? (
         <section className="workbench-section space-y-3">
           <div className="space-y-1">
-            <p className="text-sm font-semibold text-slate-950">Création terminée</p>
+            <p className="text-sm font-semibold text-slate-950">
+              {result.disposition === "created" ? "Création terminée" : "Demande envoyée en revue manuelle"}
+            </p>
             <p className="text-xs uppercase tracking-[0.12em] text-slate-500">
               {result.provider.label} · {result.provider.model} · {result.provider.location}
             </p>
@@ -126,19 +139,31 @@ export function AIIntakePanel() {
               </span>
             ))}
           </div>
-          <div className="space-y-2 text-sm text-slate-700">
-            {result.created.map((item) => (
-              <div key={item.id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2">
-                <div>
-                  <p className="font-medium text-slate-900">{item.title}</p>
-                  <p className="text-xs uppercase tracking-[0.12em] text-slate-500">{item.module}</p>
+          {result.disposition === "created" ? (
+            <div className="space-y-2 text-sm text-slate-700">
+              {result.created.map((item) => (
+                <div key={item.id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2">
+                  <div>
+                    <p className="font-medium text-slate-900">{item.title}</p>
+                    <p className="text-xs uppercase tracking-[0.12em] text-slate-500">{item.module}</p>
+                  </div>
+                  <Link href={item.href} className="button-secondary">
+                    Ouvrir
+                  </Link>
                 </div>
-                <Link href={item.href} className="button-secondary">
-                  Ouvrir
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              <p className="font-medium">Motif de revue: {result.reviewReason}</p>
+              <p className="mt-1">Module proposé: {result.selectedModule}</p>
+              <div className="mt-3">
+                <Link href={`/ai-reviews?selectedId=${result.reviewId}`} className="button-secondary">
+                  Ouvrir la revue
                 </Link>
               </div>
-            ))}
-          </div>
+            </div>
+          )}
         </section>
       ) : null}
     </section>

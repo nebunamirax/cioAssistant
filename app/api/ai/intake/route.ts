@@ -30,7 +30,7 @@ export async function POST(request: Request) {
     }
 
     const data = await ingestAIIntake(payload);
-    return NextResponse.json({ data }, { status: 201 });
+    return NextResponse.json({ data }, { status: data.disposition === "created" ? 201 : 202 });
   } catch (error) {
     return NextResponse.json({ error: (error as Error).message }, { status: 400 });
   }

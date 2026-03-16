@@ -1,6 +1,6 @@
 # CIO Assistant
 
-Application web locale (MVP mono-utilisateur) pour piloter actions, projets, contrats, budget et communications templatisées avec une interface de type workbench: dense, contextuelle et conçue pour éditer sans changer d'écran.
+Application web locale (MVP mono-utilisateur) pour piloter actions, projets, contrats, budget et communications templatisées avec une interface de type workbench, enrichie par un assistant conversationnel capable de comprendre le langage naturel, d'agir sur les modules métier et de traiter texte, documents et audio.
 
 ## Stack
 - Next.js App Router + TypeScript
@@ -51,6 +51,7 @@ docs/
 
 ## Routes App Router
 - `/`
+- `/ai-reviews`
 - `/actions`
 - `/actions/[id]`
 - `/projects`
@@ -65,6 +66,7 @@ docs/
 - `/communications/[id]`
 - `/meetings`
 - `/emails`
+- `/settings`
 - `/settings/integrations`
 - `/settings/ai`
 
@@ -100,6 +102,7 @@ docs/
 - `POST /api/ai/classify`
 - `POST /api/ai/suggest-project`
 - `POST /api/ai/intake`
+- `POST /api/assistant/messages`
 - `GET /api/integrations/outlook`
 - `GET /api/integrations/notion`
 - `GET /api/integrations/ai`
@@ -110,15 +113,42 @@ docs/
 - `lib/ai/providers/openai-provider.ts`
 - `lib/ai/providers/compatible-provider.ts`
 - `lib/ai/provider-factory.ts`
+- `lib/services/ai-intake-service.ts`: planification sémantique, extraction par étape, exécution et fallback revue
 
-## Ingestion IA dashboard
-- La page principale expose une zone de capture pour coller du texte ou charger un document texte.
-- Le flux `POST /api/ai/intake` analyse le contenu puis crée directement des entrées dans le ou les bons modules (`Actions`, `Projets`, `Prestataires`, `Contrats`, `Budget`, `Communications`).
-- Les liaisons connues sont appliquées automatiquement quand elles peuvent être inférées.
-- En cas d’analyse pauvre, le fallback crée au minimum une action pour éviter la perte d’information.
-- Les documents `PDF` et `DOCX` sont acceptés et convertis en texte côté serveur avant routage.
-- Le provider peut être `local`, `openai` ou `compatible`, avec sélection explicite du modèle via variables d’environnement.
-- Les paramètres applicatifs sont aussi modifiables depuis l’UI unifiée `/settings`, avec persistance locale dans un fichier JSON.
+## Assistant IA principal
+- La page principale est un assistant de type chat, utilisable en langage naturel.
+- L'utilisateur peut lui demander de créer, modifier, compléter, classer ou relier des éléments métier dans `Actions`, `Projets`, `Prestataires`, `Contrats`, `Budget`, `Communications` et, à terme, `Réunions`.
+- La priorité d'usage doit rester le texte, qu'il soit:
+  - saisi directement dans le chat
+  - collé depuis un email ou un document
+  - extrait d'un fichier `PDF` ou `DOCX`
+- L'assistant accepte aujourd'hui sur la même surface:
+  - texte libre
+  - document (`txt`, `md`, `csv`, `json`, `eml`, `pdf`, `docx`)
+- L'audio via micro et fichier audio reste prévu, mais n'est pas encore implémenté.
+- Le backend convertit les documents texte en texte exploitable avant raisonnement métier.
+- Le flux IA fait d'abord une planification sémantique de la demande, puis extrait les champs utiles étape par étape avant exécution si la confiance est suffisante.
+- Si le routage est ambigu, la demande part en revue manuelle, avec possibilité de sélectionner un module puis de relancer une extraction ciblée des champs pour ce module.
+- L'assistant doit gérer les créations multi-modules dans une seule conversation, par exemple un projet avec plusieurs actions associées.
+- Le pipeline injecte aussi une shortlist de projets candidats en contexte serveur pour améliorer le rattachement d'actions ou de contrats à un projet existant.
+- Les données explicites comme dates, montants, prestataires ou listes d'actions ne doivent pas être perdues même si le format d'entrée est libre.
+- Les contrats doivent faire partie des cas prioritaires:
+  - dépôt d'un `PDF` de contrat
+  - extraction du titre, du fournisseur, des dates de début/fin, du type, du renouvellement, du montant et des échéances utiles
+  - création ou préremplissage de `Contrats`, `Prestataires`, `Actions` et éventuellement `Budget`
+- Un usage cible ultérieur est la transcription et la synthèse de réunions:
+  - transcription depuis micro ou fichier audio
+  - synthèse opérationnelle
+  - extraction d'actions, décisions, risques et échéances
+  - création ou préremplissage de notes de réunion et d'entrées liées
+- Exemples de commandes cibles:
+  - `ajoute un projet "toto" qui commence le 12/01/2026 et termine le 15/05/2026 et ajoute cette liste d'action : x, y, z`
+  - `analyse ce PDF de contrat et crée le contrat, le prestataire et les actions de suivi`
+  - `résume cette réunion et sors les décisions et actions`
+- Le provider peut être `openai` ou `compatible`, avec sélection explicite du modèle via variables d’environnement ou paramètres UI.
+- Les paramètres applicatifs restent modifiables depuis l’UI unifiée `/settings`, avec persistance locale dans un fichier JSON.
+- Le défaut applicatif cible LM Studio en mode OpenAI-compatible: `http://host.docker.internal:1234/v1` avec `mistralai/devstral-small-2507`.
+- Les réponses du chat reviennent aujourd'hui avec une sémantique conversationnelle stable via `POST /api/assistant/messages`, incluant message utilisateur, message assistant, opérations créées et éventuelles revues.
 
 ## Démarrage
 ```bash

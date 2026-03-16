@@ -10,6 +10,12 @@ type ActionFormValues = {
   status: (typeof ACTION_STATUSES)[number];
   priority: (typeof PRIORITIES)[number];
   dueDate?: string | null;
+  projectId?: string | null;
+};
+
+type ProjectOption = {
+  id: string;
+  title: string;
 };
 
 type ActionFormProps = {
@@ -28,6 +34,8 @@ export function ActionForm({ mode = "create", actionId, initialValues, showHeade
   const [dueDate, setDueDate] = useState(initialValues?.dueDate ?? "");
   const [status, setStatus] = useState<(typeof ACTION_STATUSES)[number]>(initialValues?.status ?? "TODO");
   const [priority, setPriority] = useState<(typeof PRIORITIES)[number]>(initialValues?.priority ?? "NORMAL");
+  const [projectId, setProjectId] = useState(initialValues?.projectId ?? "");
+  const [projects, setProjects] = useState<ProjectOption[]>([]);
 
   useEffect(() => {
     setTitle(initialValues?.title ?? "");
@@ -35,7 +43,33 @@ export function ActionForm({ mode = "create", actionId, initialValues, showHeade
     setDueDate(initialValues?.dueDate ?? "");
     setStatus(initialValues?.status ?? "TODO");
     setPriority(initialValues?.priority ?? "NORMAL");
+    setProjectId(initialValues?.projectId ?? "");
   }, [actionId, initialValues, mode]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadProjects = async () => {
+      const response = await fetch("/api/projects");
+      const payload = await response.json();
+
+      if (!response.ok || cancelled) {
+        return;
+      }
+
+      setProjects(
+        Array.isArray(payload.data)
+          ? payload.data.map((project: { id: string; title: string }) => ({ id: project.id, title: project.title }))
+          : []
+      );
+    };
+
+    void loadProjects();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,7 +84,8 @@ export function ActionForm({ mode = "create", actionId, initialValues, showHeade
         description,
         status,
         priority,
-        dueDate: dueDate ? new Date(dueDate).toISOString() : null
+        dueDate: dueDate ? new Date(dueDate).toISOString() : null,
+        projectId: projectId || null
       })
     });
     const payload = await response.json();
@@ -67,6 +102,7 @@ export function ActionForm({ mode = "create", actionId, initialValues, showHeade
       setDueDate("");
       setStatus("TODO");
       setPriority("NORMAL");
+      setProjectId("");
     }
 
     setLoading(false);
@@ -125,6 +161,18 @@ export function ActionForm({ mode = "create", actionId, initialValues, showHeade
               ))}
             </select>
           </div>
+        </div>
+        <div>
+          <label className="field-label">Projet</label>
+          <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className="field-select">
+            <option value="">Aucun projet</option>
+            {projects.map((project) => (
+              <option key={project.id} value={project.id}>
+                {project.title}
+              </option>
+            ))}
+          </select>
+          <p className="field-hint">Permet de rattacher l’action au bon projet pour le suivi croisé.</p>
         </div>
         <div>
           <label className="field-label">Échéance</label>

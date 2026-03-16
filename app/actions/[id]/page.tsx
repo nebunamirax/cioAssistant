@@ -38,7 +38,8 @@ export default async function ActionDetailPage({ params }: { params: { id: strin
             description: action.description ?? "",
             status,
             priority,
-            dueDate: action.dueDate ? new Date(action.dueDate).toISOString().slice(0, 16) : ""
+            dueDate: action.dueDate ? new Date(action.dueDate).toISOString().slice(0, 16) : "",
+            projectId: action.projectId ?? ""
           }}
         />
         <section className="space-y-3 rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-700">

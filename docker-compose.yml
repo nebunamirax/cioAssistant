@@ -7,8 +7,9 @@ services:
       - "3000:3000"
     environment:
       DATABASE_URL: "file:./prisma/dev.db"
-      AI_PROVIDER_MODE: "local"
-      AI_EXTERNAL_BASE_URL: ""
+      AI_PROVIDER_MODE: "compatible"
+      AI_COMPATIBLE_BASE_URL: "http://host.docker.internal:1234/v1"
+      AI_COMPATIBLE_MODEL: "mistralai/devstral-small-2507"
     command: sh -lc "npx prisma db push && npm run dev"
 
   verify:
@@ -17,8 +18,9 @@ services:
       dockerfile: Dockerfile
     environment:
       DATABASE_URL: "file:./prisma/dev.db"
-      AI_PROVIDER_MODE: "local"
-      AI_EXTERNAL_BASE_URL: ""
+      AI_PROVIDER_MODE: "compatible"
+      AI_COMPATIBLE_BASE_URL: "http://host.docker.internal:1234/v1"
+      AI_COMPATIBLE_MODEL: "mistralai/devstral-small-2507"
     command: sh -lc "npm run test:run && npx prisma db push && npm run lint && npm run build"
 
   test:
@@ -27,6 +29,7 @@ services:
       dockerfile: Dockerfile
     environment:
       DATABASE_URL: "file:./prisma/dev.db"
-      AI_PROVIDER_MODE: "local"
-      AI_EXTERNAL_BASE_URL: ""
+      AI_PROVIDER_MODE: "compatible"
+      AI_COMPATIBLE_BASE_URL: "http://host.docker.internal:1234/v1"
+      AI_COMPATIBLE_MODEL: "mistralai/devstral-small-2507"
     command: npm run test:run

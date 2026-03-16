@@ -4,10 +4,11 @@ import { LocalAIProvider } from "@/lib/ai/providers/local-provider";
 import { OpenAIProvider } from "@/lib/ai/providers/openai-provider";
 import { loadAppSettingsSync } from "@/lib/settings/service";
 import { type AIProvider } from "@/lib/ai/types";
+import type { AppSettings } from "@/lib/settings/schema";
 
-export function getAIProvider(): AIProvider {
-  const config = getAIConfiguration();
-  const settings = loadAppSettingsSync();
+export function getAIProvider(settingsOverride?: AppSettings): AIProvider {
+  const settings = settingsOverride ?? loadAppSettingsSync();
+  const config = getAIConfiguration(settings);
   const openAIApiKey = settings.ai.openAIApiKey.trim() || process.env.OPENAI_API_KEY || "";
   const compatibleApiKey = settings.ai.compatibleApiKey.trim() || process.env.AI_COMPATIBLE_API_KEY || process.env.AI_EXTERNAL_API_KEY;
 

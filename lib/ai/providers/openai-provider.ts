@@ -1,5 +1,16 @@
-import { intakeSystemPrompt } from "@/lib/ai/prompts";
-import { intakeAnalysisJsonSchema, intakeAnalysisSchema, type IntakeAnalysis } from "@/lib/ai/intake-schema";
+import { intakeModuleDraftPrompt, intakePlanningPrompt, intakeSystemPrompt } from "@/lib/ai/prompts";
+import { buildAIContextBlock } from "@/lib/ai/request-context";
+import {
+  getIntakeDraftJsonSchema,
+  getIntakeDraftSchema,
+  intakeExecutionPlanJsonSchema,
+  intakeExecutionPlanSchema,
+  intakeDecisionJsonSchema,
+  intakeDecisionSchema,
+  type IntakeDecision,
+  type IntakeExecutionPlan,
+  type IntakeModule
+} from "@/lib/ai/intake-schema";
 import { type AIProvider, type AIRequest, type AIResult } from "@/lib/ai/types";
 
 function extractTextPayload(payload: unknown): string {
@@ -49,7 +60,32 @@ export class OpenAIProvider implements AIProvider {
     };
   }
 
+  async testConnection() {
+    const response = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${this.apiKey}`
+      },
+      body: JSON.stringify({
+        model: this.model,
+        input: "ping"
+      })
+    });
+
+    const rawBody = await response.text();
+    const preview = rawBody.slice(0, 240);
+
+    return {
+      ok: response.ok,
+      statusCode: response.status,
+      message: response.ok ? "Réponse OpenAI reçue." : `Réponse OpenAI en erreur (${response.status}).`,
+      responsePreview: preview
+    };
+  }
+
   private async requestJSON(input: AIRequest, systemPrompt: string, schemaName: string, schema: object) {
+    const userInput = `${input.text}${buildAIContextBlock(input.context)}`;
     const response = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
       headers: {
@@ -65,7 +101,7 @@ export class OpenAIProvider implements AIProvider {
           },
           {
             role: "user",
-            content: [{ type: "input_text", text: input.text }]
+            content: [{ type: "input_text", text: userInput }]
           }
         ],
         text: {
@@ -94,6 +130,7 @@ export class OpenAIProvider implements AIProvider {
   }
 
   private async requestText(input: AIRequest, instruction: string, task: AIResult["task"]) {
+    const userInput = `${input.text}${buildAIContextBlock(input.context)}`;
     const response = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
       headers: {
@@ -109,7 +146,7 @@ export class OpenAIProvider implements AIProvider {
           },
           {
             role: "user",
-            content: [{ type: "input_text", text: input.text }]
+            content: [{ type: "input_text", text: userInput }]
           }
         ]
       })
@@ -123,9 +160,20 @@ export class OpenAIProvider implements AIProvider {
     return { task, data: { text: extractTextPayload(payload) } } as AIResult;
   }
 
-  async analyzeIntake(input: AIRequest): Promise<IntakeAnalysis> {
-    const parsed = await this.requestJSON(input, intakeSystemPrompt, intakeAnalysisJsonSchema.name, intakeAnalysisJsonSchema.schema);
-    return intakeAnalysisSchema.parse(parsed);
+  async analyzeIntake(input: AIRequest): Promise<IntakeDecision> {
+    const parsed = await this.requestJSON(input, intakeSystemPrompt, intakeDecisionJsonSchema.name, intakeDecisionJsonSchema.schema);
+    return intakeDecisionSchema.parse(parsed);
+  }
+
+  async planIntake(input: AIRequest): Promise<IntakeExecutionPlan> {
+    const parsed = await this.requestJSON(input, intakePlanningPrompt, intakeExecutionPlanJsonSchema.name, intakeExecutionPlanJsonSchema.schema);
+    return intakeExecutionPlanSchema.parse(parsed);
+  }
+
+  async suggestDraft(module: IntakeModule, input: AIRequest) {
+    const schema = getIntakeDraftJsonSchema(module);
+    const parsed = await this.requestJSON(input, intakeModuleDraftPrompt(module), schema.name, schema.schema);
+    return getIntakeDraftSchema(module).partial().parse(parsed);
   }
 
   summarize(input: AIRequest) {

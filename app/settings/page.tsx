@@ -11,7 +11,10 @@ export default function SettingsPage() {
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Paramètres</p>
           <h1 className="text-2xl font-semibold text-slate-950">Configuration unifiée</h1>
           <p className="text-sm text-slate-600">
-            Toute la configuration applicative est regroupée ici: IA, modèles, providers locaux, OpenAI, Outlook et Notion.
+            Toute la configuration applicative est regroupée ici: IA, OpenAI, providers OpenAI-compatible, Outlook et Notion.
+          </p>
+          <p className="text-sm text-slate-500">
+            Valeur par défaut appliquée: LM Studio via `http://host.docker.internal:1234/v1` avec le modèle `mistralai/devstral-small-2507`.
           </p>
         </div>
       </section>

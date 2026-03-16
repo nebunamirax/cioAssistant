@@ -1,4 +1,4 @@
-import type { IntakeAnalysis } from "@/lib/ai/intake-schema";
+import type { IntakeDecision, IntakeExecutionPlan, IntakeModule } from "@/lib/ai/intake-schema";
 
 export type AITaskType = "summarize" | "extract" | "classify" | "suggest-project";
 
@@ -12,6 +12,13 @@ export interface AIResult {
   data: Record<string, unknown>;
 }
 
+export interface AIConnectionTestResult {
+  ok: boolean;
+  statusCode?: number;
+  message: string;
+  responsePreview?: string;
+}
+
 export interface AIProvider {
   name: string;
   info: {
@@ -21,7 +28,10 @@ export interface AIProvider {
     model: string;
     location: "local" | "cloud";
   };
-  analyzeIntake(input: AIRequest): Promise<IntakeAnalysis>;
+  testConnection(): Promise<AIConnectionTestResult>;
+  planIntake(input: AIRequest): Promise<IntakeExecutionPlan>;
+  analyzeIntake(input: AIRequest): Promise<IntakeDecision>;
+  suggestDraft(module: IntakeModule, input: AIRequest): Promise<Record<string, unknown>>;
   summarize(input: AIRequest): Promise<AIResult>;
   extract(input: AIRequest): Promise<AIResult>;
   classify(input: AIRequest): Promise<AIResult>;

@@ -8,6 +8,7 @@ const links = [
   ["Prestataires", "/vendors"],
   ["Budget", "/budget"],
   ["Communications", "/communications"],
+  ["Revue IA", "/ai-reviews"],
   ["Réunions", "/meetings"],
   ["Emails", "/emails"],
   ["Paramètres", "/settings"]
