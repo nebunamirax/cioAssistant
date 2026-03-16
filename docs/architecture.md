@@ -100,6 +100,13 @@
 - Templates métiers disponibles: post mortem, synthèse d'avancement projet, suivi codir.
 - Le service `lib/services/communication-service.ts` centralise les filtres, les rattachements projet/action/contrat, la persistance des inputs structurés et la génération automatique du contenu.
 
+## Module Réunions
+- Liste serveur avec filtres `search` et `projectId`.
+- `/meetings` fonctionne comme un workbench de compte-rendu: liste, édition et contexte cohabitent sur le même écran.
+- Le formulaire structure titre, date, projet, participants, brut, synthèse et listes extraites.
+- Le service `lib/services/meeting-note-service.ts` centralise les filtres, la sérialisation JSON des listes et la restitution d’un format exploitable côté UI.
+- L’audio et la transcription restent un lot ultérieur, mais le module métier récepteur existe désormais.
+
 ## Validation et exécution
 - L'environnement de vérification cible passe par Docker Compose.
 - `docker compose run --rm test` lance Vitest dans le conteneur.

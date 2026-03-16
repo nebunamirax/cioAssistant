@@ -92,7 +92,8 @@ docs/
 - `GET|PATCH|DELETE /api/budget-items/[id]`
 - `GET|POST /api/communications`
 - `GET|PATCH|DELETE /api/communications/[id]`
-- `GET /api/meeting-notes`
+- `GET|POST /api/meeting-notes`
+- `GET|PATCH|DELETE /api/meeting-notes/[id]`
 - `GET /api/emails`
 - `POST /api/import/csv`
 - `GET /api/export/csv`
