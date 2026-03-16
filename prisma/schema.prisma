@@ -168,19 +168,25 @@ model MeetingNote {
 }
 
 model Email {
-  id                String   @id @default(cuid())
-  externalMessageId String   @unique
-  subject           String
-  fromEmail         String
-  receivedAt        DateTime
-  snippet           String?
-  linkedProjectId   String?
-  linkedActionId    String?
-  rawMetadataJson   String?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  linkedProject     Project? @relation(fields: [linkedProjectId], references: [id])
-  linkedAction      Action?  @relation(fields: [linkedActionId], references: [id])
+  id                   String   @id @default(cuid())
+  externalMessageId    String   @unique
+  subject              String
+  fromEmail            String
+  receivedAt           DateTime
+  snippet              String?
+  linkedProjectId      String?
+  linkedActionId       String?
+  categoriesJson       String?
+  automationStatus     String   @default("PENDING")
+  automationSummary    String?
+  automationError      String?
+  automationResultJson String?
+  automatedAt          DateTime?
+  rawMetadataJson      String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  linkedProject        Project? @relation(fields: [linkedProjectId], references: [id])
+  linkedAction         Action?  @relation(fields: [linkedActionId], references: [id])
 }
 
 model AIJob {

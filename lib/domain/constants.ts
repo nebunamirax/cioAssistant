@@ -7,6 +7,7 @@ export const RENEWAL_TYPES = ["AUTO", "MANUAL", "NONE"] as const;
 export const COMMUNICATION_STATUSES = ["DRAFT", "READY", "SENT", "ARCHIVED"] as const;
 export const AI_PROVIDER_MODES = ["LOCAL", "EXTERNAL"] as const;
 export const AI_JOB_STATUSES = ["PENDING", "RUNNING", "DONE", "FAILED"] as const;
+export const EMAIL_AUTOMATION_STATUSES = ["PENDING", "PROCESSING", "CREATED", "REVIEW", "FAILED", "IGNORED"] as const;
 
 export type Priority = (typeof PRIORITIES)[number];
 export type ActionStatus = (typeof ACTION_STATUSES)[number];
@@ -17,3 +18,4 @@ export type RenewalType = (typeof RENEWAL_TYPES)[number];
 export type CommunicationStatus = (typeof COMMUNICATION_STATUSES)[number];
 export type AIProviderMode = (typeof AI_PROVIDER_MODES)[number];
 export type AIJobStatus = (typeof AI_JOB_STATUSES)[number];
+export type EmailAutomationStatus = (typeof EMAIL_AUTOMATION_STATUSES)[number];

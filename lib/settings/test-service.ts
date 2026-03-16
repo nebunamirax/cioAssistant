@@ -109,8 +109,17 @@ function testOutlook(settings: AppSettings): SettingsTestItem {
 
   const missing = [
     !settings.integrations.outlookTenantId.trim() ? "Tenant ID manquant" : null,
-    !settings.integrations.outlookClientId.trim() ? "Client ID manquant" : null
+    !settings.integrations.outlookClientId.trim() ? "Client ID manquant" : null,
+    !settings.integrations.outlookClientSecret.trim() ? "Client secret manquant" : null
   ].filter(Boolean) as string[];
+
+  if (settings.integrations.outlookPollingEnabled && settings.integrations.outlookPollingIntervalMinutes < 1) {
+    missing.push("Intervalle de polling invalide");
+  }
+
+  if (settings.integrations.outlookAutomationEnabled && !settings.integrations.outlookAutomationCategory.trim()) {
+    missing.push("Categorie Outlook d'automatisation manquante");
+  }
 
   if (missing.length > 0) {
     return {
@@ -122,13 +131,13 @@ function testOutlook(settings: AppSettings): SettingsTestItem {
     };
   }
 
-  return {
-    scope: "outlook",
-    status: "warning",
-    title: "Configuration Outlook plausible",
-    message: "Les champs requis sont présents, mais aucun test OAuth/Graph n’est encore implémenté."
-  };
-}
+    return {
+      scope: "outlook",
+      status: "warning",
+      title: "Configuration Outlook plausible",
+      message: "Les champs requis sont présents. La connexion OAuth et la synchronisation se déclenchent ensuite depuis le module emails."
+    };
+  }
 
 function testNotion(settings: AppSettings): SettingsTestItem {
   if (!settings.integrations.notionEnabled) {

@@ -17,6 +17,11 @@ export const appSettingsSchema = z.object({
     outlookEnabled: z.boolean().default(false),
     outlookTenantId: z.string().default(""),
     outlookClientId: z.string().default(""),
+    outlookClientSecret: z.string().default(""),
+    outlookPollingEnabled: z.boolean().default(false),
+    outlookPollingIntervalMinutes: z.coerce.number().int().min(1).max(1440).default(15),
+    outlookAutomationEnabled: z.boolean().default(false),
+    outlookAutomationCategory: z.string().default("assistant"),
     notionEnabled: z.boolean().default(false),
     notionApiKey: z.string().default(""),
     notionDatabaseId: z.string().default("")

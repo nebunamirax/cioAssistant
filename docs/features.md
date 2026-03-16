@@ -12,6 +12,7 @@
 | Budget | CRUD lignes budgétaires, filtres de base, workbench dense liste + édition + rattachements métier + synthèse d'écart | implemented | Prisma, CSV |
 | Communications | Brouillons + export + templates de communication à inputs structurés + workbench dense liste + rédaction + synthèse | implemented | Prisma |
 | Mobile | Support smartphone via responsive web prioritaire, adaptation des workbenches desktop, PWA légère en second temps; application native exclue du MVP | planned | Next.js, Tailwind, UX |
-| Outlook | Intégration Microsoft Graph | planned | OAuth Microsoft |
+| M365 Email | Intégration Microsoft 365 via Microsoft Graph: connexion tenant, lecture des emails Outlook, synchronisation boîte mail et rattachement aux modules métier | planned | Microsoft Graph, OAuth Microsoft, Prisma |
+| Teams Bot | Bot Microsoft Teams relié à l'assistant: conversations, commandes métier, exposition contrôlée de workflows CIO Assistant dans Teams | planned | Microsoft Teams, Bot Framework, OAuth Microsoft |
 | Notion | Import/export optionnel | planned | Notion API |
 | IA transverse | Assistant de chat, planner sémantique, routage multi-modules, extraction ciblée par module, revue manuelle assistée, shortlist projet en contexte, priorité texte/PDF contrats | in progress | Provider IA, Prisma |

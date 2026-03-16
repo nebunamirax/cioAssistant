@@ -255,7 +255,7 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
           <div className="flex items-center justify-between gap-3">
             <div>
               <h3 className="form-section-title">Outlook</h3>
-              <p className="form-section-caption">Prépare la connexion Microsoft Graph.</p>
+              <p className="form-section-caption">Prépare la connexion Microsoft Graph. La callback OAuth est calculee automatiquement sur `/api/integrations/outlook/callback`.</p>
             </div>
             <div className="flex flex-wrap items-center justify-end gap-2">
               <label className="flex items-center gap-2 text-sm text-slate-700">
@@ -296,7 +296,61 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
                 className="field-input"
               />
             </label>
+            <label className="md:col-span-2">
+              <span className="field-label">Client secret</span>
+              <input
+                value={settings.integrations.outlookClientSecret}
+                onChange={(event) => updateIntegrationField("outlookClientSecret", event.target.value)}
+                className="field-input"
+                type="password"
+                placeholder="Secret de l'application Entra ID"
+              />
+            </label>
           </div>
+          <p className="text-xs text-slate-500">
+            Une fois les champs enregistres, lance la connexion depuis le module `Emails`.
+          </p>
+          <div className="grid gap-3 md:grid-cols-2">
+            <label className="flex items-center gap-2 text-sm text-slate-700">
+              <input
+                type="checkbox"
+                checked={settings.integrations.outlookPollingEnabled}
+                onChange={(event) => updateIntegrationField("outlookPollingEnabled", event.target.checked)}
+              />
+              Polling actif
+            </label>
+            <label>
+              <span className="field-label">Intervalle de lecture</span>
+              <input
+                value={String(settings.integrations.outlookPollingIntervalMinutes)}
+                onChange={(event) => updateIntegrationField("outlookPollingIntervalMinutes", event.target.value)}
+                className="field-input"
+                type="number"
+                min={1}
+                max={1440}
+              />
+            </label>
+            <label className="flex items-center gap-2 text-sm text-slate-700">
+              <input
+                type="checkbox"
+                checked={settings.integrations.outlookAutomationEnabled}
+                onChange={(event) => updateIntegrationField("outlookAutomationEnabled", event.target.checked)}
+              />
+              Extraction auto active
+            </label>
+            <label>
+              <span className="field-label">Categorie(s) Outlook</span>
+              <input
+                value={settings.integrations.outlookAutomationCategory}
+                onChange={(event) => updateIntegrationField("outlookAutomationCategory", event.target.value)}
+                className="field-input"
+                placeholder="assistant,prioritaire"
+              />
+            </label>
+          </div>
+          <p className="text-xs text-slate-500">
+            L'automatisation traite les emails dont la categorie Outlook correspond, puis cree des objets metier ou envoie en revue IA.
+          </p>
           {testResults.outlook ? (
             <div className="rounded-2xl border border-slate-200 bg-white p-3">
               <p className="text-sm font-semibold text-slate-950">{testResults.outlook.message}</p>
