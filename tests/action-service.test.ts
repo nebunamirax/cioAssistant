@@ -74,6 +74,8 @@ describe("action-service", () => {
     const { createAction } = await import("@/lib/services/action-service");
     await createAction({
       title: "Preparer le lot 1",
+      status: "TODO",
+      priority: "NORMAL",
       dueDate: "2026-03-15T10:00:00.000Z"
     });
 

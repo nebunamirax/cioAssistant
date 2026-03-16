@@ -45,7 +45,8 @@ describe("compatible-provider", () => {
       })
     );
 
-    const request = JSON.parse(String(fetchMock.mock.calls[0][1]?.body));
+    const requestCall = fetchMock.mock.calls[0] as unknown as [string, RequestInit | undefined] | undefined;
+    const request = JSON.parse(String(requestCall?.[1]?.body ?? ""));
     expect(request.response_format).toBeUndefined();
     expect(result).toEqual(
       expect.objectContaining({

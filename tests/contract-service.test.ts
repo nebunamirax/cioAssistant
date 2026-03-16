@@ -87,6 +87,8 @@ describe("contract-service", () => {
     await createContract({
       vendorId: "v1",
       title: "Infogerance 2026",
+      status: "DRAFT",
+      renewalType: "NONE",
       amountPlanned: 12000,
       startDate: "2026-03-15T10:00:00.000Z"
     });

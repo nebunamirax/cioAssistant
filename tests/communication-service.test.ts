@@ -97,6 +97,7 @@ describe("communication-service", () => {
     const { createCommunication } = await import("@/lib/services/communication-service");
     await createCommunication({
       title: "Synthese comex",
+      status: "DRAFT",
       type: "",
       contentText: "",
       projectId: ""
@@ -119,6 +120,7 @@ describe("communication-service", () => {
     const { createCommunication } = await import("@/lib/services/communication-service");
     await createCommunication({
       title: "",
+      status: "DRAFT",
       templateKey: "PROJECT_PROGRESS",
       templateInputData: {
         projectName: "Refonte intranet",

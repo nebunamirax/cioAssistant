@@ -84,6 +84,8 @@ describe("project-service", () => {
     await createProject({
       title: "Migration ERP",
       type: "MIGRATION",
+      status: "DRAFT",
+      priority: "NORMAL",
       startDate: "2026-03-15T10:00:00.000Z"
     });
 

@@ -495,7 +495,7 @@ async function ensureVendor(toolCall: Extract<IntakeToolCall, { tool: "create_ve
     name: toolCall.args.name,
     category: toolCall.args.category,
     mainContactName: toolCall.args.mainContactName,
-    mainContactEmail: toolCall.args.mainContactEmail,
+    mainContactEmail: toolCall.args.mainContactEmail ?? null,
     notes: toolCall.args.notes
   });
   created.vendorId = vendor.id;
@@ -738,7 +738,7 @@ async function createRecordsFromDecision(sourceName: string | null, sourceText: 
   const created: CreatedRecord[] = [];
   const sourceRef = buildSourceReference(sourceName);
   const context = {
-    created: { vendorId: null, projectId: null, contractId: null },
+    created: { vendorId: null, projectId: null, contractId: null, stepRefs: new Map<string, { module: IntakeModule; id: string }>() },
     records: created,
     sourceRef,
     sourceText
@@ -762,8 +762,13 @@ async function tryHeuristicFallback(args: {
   sourceName: string | null;
   text: string;
   provider: ProviderInfo;
+  projectCandidates: ProjectCandidate[];
 }) {
-  const heuristicDecision = analyzeIntakeText(args.text, args.sourceName);
+  const heuristicDecision = attachExistingProjectContext(
+    analyzeIntakeText(args.text, args.sourceName),
+    args.text,
+    args.projectCandidates
+  );
   const heuristicReviewReason = reviewReasonForDecision(heuristicDecision);
 
   if (!heuristicReviewReason) {
@@ -827,7 +832,8 @@ export async function ingestAIIntake(payload: AIIntakeInput): Promise<AIIntakeRe
     const fallbackResult = await tryHeuristicFallback({
       sourceName: validated.sourceName ?? null,
       text: validated.text,
-      provider: provider.info
+      provider: provider.info,
+      projectCandidates
     });
 
     if (fallbackResult.disposition === "created") {

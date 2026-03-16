@@ -241,31 +241,10 @@ Communication: Annonce migration Azure
     expect(result.selectedModule).toBe("actions");
   });
 
-  it("préremplit la revue avec un titre et une échéance pour une demande simple envoyée par mail", async () => {
-    let latestDraftDataJson: string | null = null;
-    prismaMock.aIIntakeReview.update.mockImplementationOnce(async ({ data }) => {
-      latestDraftDataJson = data.draftDataJson ?? null;
-      return {
-        id: "review-2",
-        sourceName: null,
-        rawText: "Hello Max,\n\nTu pourrais me changer mon pc le 28/07/2026 ?\n\nMerci !",
-        providerMode: "test",
-        providerLabel: "Test intake analyzer",
-        providerModel: "analyzer",
-        summary: "Hello Max, Tu pourrais me changer mon pc le 28/07/2026 ? Merci !",
-        suggestedModulesJson: "[]",
-        analysisJson: null,
-        status: "PENDING",
-        reviewReason: "Le modèle n’a pas choisi de module principal exploitable. La demande part en revue manuelle.",
-        selectedModule: data.selectedModule ?? "actions",
-        draftDataJson: data.draftDataJson ?? null,
-        createdEntityType: null,
-        createdEntityId: null,
-        createdEntityHref: null,
-        reviewedAt: null,
-        createdAt: new Date("2026-03-15T10:00:00.000Z"),
-        updatedAt: new Date("2026-03-15T10:00:00.000Z")
-      };
+  it("cree directement une action avec titre et échéance pour une demande simple envoyée par mail", async () => {
+    prismaMock.action.create.mockResolvedValueOnce({
+      id: "a-mail",
+      title: "changer mon pc"
     });
 
     const { ingestAIIntake } = await import("@/lib/services/ai-intake-service");
@@ -273,12 +252,22 @@ Communication: Annonce migration Azure
       text: "Hello Max,\n\nTu pourrais me changer mon pc le 28/07/2026 ?\n\nMerci !"
     });
 
-    expect(result.disposition).toBe("review");
-    expect(result.selectedModule).toBe("actions");
-    expect(latestDraftDataJson).not.toBeNull();
-    const draft = JSON.parse(String(latestDraftDataJson)) as Record<string, unknown>;
-    expect(String(draft.title)).toContain("changer mon pc");
-    expect(draft.dueDate).toBe("2026-07-28T09:00:00.000Z");
+    expect(prismaMock.action.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          title: expect.stringContaining("changer mon pc"),
+          dueDate: new Date("2026-07-28T09:00:00.000Z")
+        })
+      })
+    );
+    expect(prismaMock.aIIntakeReview.update).not.toHaveBeenCalled();
+    expect(result.disposition).toBe("created");
+    if (result.disposition !== "created") {
+      throw new Error("Expected created result");
+    }
+    expect(result.created).toEqual([
+      expect.objectContaining({ module: "actions", id: "a-mail", href: "/actions/a-mail" })
+    ]);
   });
 
   it("cree un projet et plusieurs actions associees quand la liste d'actions est inline", async () => {

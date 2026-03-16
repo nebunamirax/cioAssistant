@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { CommunicationDeleteButton } from "@/components/communications/communication-delete-button";
 import { CommunicationForm } from "@/components/communications/communication-form";
-import { getCommunicationTemplate } from "@/lib/communications/templates";
+import { getCommunicationTemplate, type CommunicationTemplateKey } from "@/lib/communications/templates";
 import { COMMUNICATION_STATUSES } from "@/lib/domain/constants";
 import { prisma } from "@/lib/db/prisma";
 import { getCommunicationById } from "@/lib/services/communication-service";
@@ -20,7 +20,7 @@ export default async function CommunicationDetailPage({ params }: { params: { id
   const status = COMMUNICATION_STATUSES.includes(communication.status as (typeof COMMUNICATION_STATUSES)[number])
     ? (communication.status as (typeof COMMUNICATION_STATUSES)[number])
     : "DRAFT";
-  const templateKey = getCommunicationTemplate(communication.templateKey)?.key ?? "";
+  const templateKey = (getCommunicationTemplate(communication.templateKey)?.key ?? "") as CommunicationTemplateKey | "";
   const projectOptions = projects.map((project) => ({ id: project.id, label: project.title }));
   const actionOptions = actions.map((action) => ({ id: action.id, label: action.title }));
   const contractOptions = contracts.map((contract) => ({ id: contract.id, label: contract.title }));

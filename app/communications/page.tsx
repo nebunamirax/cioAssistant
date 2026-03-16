@@ -2,7 +2,7 @@ import Link from "next/link";
 import { CommunicationDeleteButton } from "@/components/communications/communication-delete-button";
 import { CommunicationFilters } from "@/components/communications/communication-filters";
 import { CommunicationForm } from "@/components/communications/communication-form";
-import { getCommunicationTemplate } from "@/lib/communications/templates";
+import { getCommunicationTemplate, type CommunicationTemplateKey } from "@/lib/communications/templates";
 import { COMMUNICATION_STATUSES } from "@/lib/domain/constants";
 import { prisma } from "@/lib/db/prisma";
 import { getCommunicationById, listCommunications } from "@/lib/services/communication-service";
@@ -54,7 +54,7 @@ export default async function CommunicationsPage({ searchParams }: Communication
   const projectOptions = projects.map((project) => ({ id: project.id, label: project.title }));
   const actionOptions = actions.map((action) => ({ id: action.id, label: action.title }));
   const contractOptions = contracts.map((contract) => ({ id: contract.id, label: contract.title }));
-  const selectedTemplateKey = getCommunicationTemplate(selectedCommunication?.templateKey)?.key ?? "";
+  const selectedTemplateKey = (getCommunicationTemplate(selectedCommunication?.templateKey)?.key ?? "") as CommunicationTemplateKey | "";
   const baseParams = new URLSearchParams();
 
   if (searchParams?.search) baseParams.set("search", searchParams.search);
