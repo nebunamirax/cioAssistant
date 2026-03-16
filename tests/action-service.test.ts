@@ -55,7 +55,9 @@ describe("action-service", () => {
             {
               OR: [
                 { title: { contains: "lot" } },
-                { description: { contains: "lot" } }
+                { description: { contains: "lot" } },
+                { ownerName: { contains: "lot" } },
+                { sourceRef: { contains: "lot" } }
               ]
             },
             { status: "TODO" },
@@ -84,6 +86,7 @@ describe("action-service", () => {
       data: {
         title: "Preparer le lot 1",
         completedAt: null,
+        ownerName: null,
         status: "TODO",
         priority: "NORMAL",
         dueDate: new Date("2026-03-15T10:00:00.000Z"),
@@ -106,6 +109,7 @@ describe("action-service", () => {
       data: {
         completedAt: expect.any(Date),
         description: null,
+        ownerName: undefined,
         status: "DONE"
       }
     });

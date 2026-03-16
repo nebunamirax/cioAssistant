@@ -61,6 +61,10 @@ export default async function MeetingsPage({ searchParams }: MeetingsPageProps) 
               <div className="workbench-kpi-value">{meetingNotes.reduce((total, meeting) => total + meeting.extractedActions.length, 0)}</div>
             </div>
             <div className="workbench-kpi">
+              <div className="workbench-kpi-label">Actions creees</div>
+              <div className="workbench-kpi-value">{meetingNotes.reduce((total, meeting) => total + meeting.extractedActions.filter((action) => action.createdActionId).length, 0)}</div>
+            </div>
+            <div className="workbench-kpi">
               <div className="workbench-kpi-label">Selection</div>
               <div className="workbench-kpi-value">{selectedMeetingNote ? "1" : "0"}</div>
             </div>
@@ -158,6 +162,7 @@ export default async function MeetingsPage({ searchParams }: MeetingsPageProps) 
               <p><strong>Date:</strong> {formatDate(selectedMeetingNote.meetingDate)}</p>
               <p><strong>Participants:</strong> {selectedMeetingNote.attendees.length}</p>
               <p><strong>Actions:</strong> {selectedMeetingNote.extractedActions.length}</p>
+              <p><strong>Actions creees:</strong> {selectedMeetingNote.extractedActions.filter((action) => action.createdActionId).length}</p>
               <p><strong>Decisions:</strong> {selectedMeetingNote.extractedDecisions.length}</p>
               <p><strong>Risques:</strong> {selectedMeetingNote.extractedRisks.length}</p>
               <p><strong>Echeances:</strong> {selectedMeetingNote.extractedDeadlines.length}</p>

@@ -11,6 +11,15 @@ describe("actionSchema", () => {
     expect(result.priority).toBe("NORMAL");
   });
 
+  it("accepte un responsable explicite", () => {
+    const result = actionSchema.parse({
+      title: "Relancer l'editeur",
+      ownerName: "Max Martin"
+    });
+
+    expect(result.ownerName).toBe("Max Martin");
+  });
+
   it("rejette un statut invalide", () => {
     expect(() =>
       actionSchema.parse({

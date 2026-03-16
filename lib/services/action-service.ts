@@ -22,6 +22,7 @@ function buildActionCreateData(input: ActionInput): Prisma.ActionUncheckedCreate
   return {
     title: input.title,
     description: normalizeOptionalString(input.description ?? null),
+    ownerName: normalizeOptionalString(input.ownerName ?? null),
     status: input.status,
     priority: input.priority,
     dueDate: toNullableDate(input.dueDate),
@@ -38,6 +39,7 @@ function buildActionUpdateData(input: ActionUpdateInput): Prisma.ActionUnchecked
   return {
     ...(input.title !== undefined ? { title: input.title } : {}),
     ...(input.description !== undefined ? { description: normalizeOptionalString(input.description) } : {}),
+    ...(input.ownerName !== undefined ? { ownerName: normalizeOptionalString(input.ownerName) } : {}),
     ...(input.status !== undefined ? { status: input.status } : {}),
     ...(input.priority !== undefined ? { priority: input.priority } : {}),
     ...(input.dueDate !== undefined ? { dueDate: toNullableDate(input.dueDate) } : {}),
@@ -60,7 +62,9 @@ export async function listActions(filters?: ActionFilters) {
           {
             OR: [
               { title: { contains: validatedFilters.search } },
-              { description: { contains: validatedFilters.search } }
+              { description: { contains: validatedFilters.search } },
+              { ownerName: { contains: validatedFilters.search } },
+              { sourceRef: { contains: validatedFilters.search } }
             ]
           }
         ]

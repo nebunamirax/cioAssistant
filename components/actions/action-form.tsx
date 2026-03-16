@@ -7,6 +7,7 @@ import { ACTION_STATUSES, PRIORITIES } from "@/lib/domain/constants";
 type ActionFormValues = {
   title: string;
   description?: string | null;
+  ownerName?: string | null;
   status: (typeof ACTION_STATUSES)[number];
   priority: (typeof PRIORITIES)[number];
   dueDate?: string | null;
@@ -31,6 +32,7 @@ export function ActionForm({ mode = "create", actionId, initialValues, showHeade
   const [error, setError] = useState<string | null>(null);
   const [title, setTitle] = useState(initialValues?.title ?? "");
   const [description, setDescription] = useState(initialValues?.description ?? "");
+  const [ownerName, setOwnerName] = useState(initialValues?.ownerName ?? "");
   const [dueDate, setDueDate] = useState(initialValues?.dueDate ?? "");
   const [status, setStatus] = useState<(typeof ACTION_STATUSES)[number]>(initialValues?.status ?? "TODO");
   const [priority, setPriority] = useState<(typeof PRIORITIES)[number]>(initialValues?.priority ?? "NORMAL");
@@ -40,6 +42,7 @@ export function ActionForm({ mode = "create", actionId, initialValues, showHeade
   useEffect(() => {
     setTitle(initialValues?.title ?? "");
     setDescription(initialValues?.description ?? "");
+    setOwnerName(initialValues?.ownerName ?? "");
     setDueDate(initialValues?.dueDate ?? "");
     setStatus(initialValues?.status ?? "TODO");
     setPriority(initialValues?.priority ?? "NORMAL");
@@ -82,6 +85,7 @@ export function ActionForm({ mode = "create", actionId, initialValues, showHeade
       body: JSON.stringify({
         title,
         description,
+        ownerName,
         status,
         priority,
         dueDate: dueDate ? new Date(dueDate).toISOString() : null,
@@ -99,6 +103,7 @@ export function ActionForm({ mode = "create", actionId, initialValues, showHeade
     if (mode === "create") {
       setTitle("");
       setDescription("");
+      setOwnerName("");
       setDueDate("");
       setStatus("TODO");
       setPriority("NORMAL");
@@ -137,6 +142,16 @@ export function ActionForm({ mode = "create", actionId, initialValues, showHeade
             className="field-textarea"
           />
           <p className="field-hint">Optionnel, mais utile pour transmettre l’intention sans devoir ouvrir une fiche détail.</p>
+        </div>
+        <div>
+          <label className="field-label">Responsable</label>
+          <input
+            value={ownerName}
+            onChange={(e) => setOwnerName(e.target.value)}
+            placeholder="Ex: Max Martin"
+            className="field-input"
+          />
+          <p className="field-hint">Nom du porteur de l’action si l’attribution est connue.</p>
         </div>
       </section>
       <section className="form-section space-y-3">

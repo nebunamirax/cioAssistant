@@ -1,13 +1,19 @@
-FROM node:20-bookworm-slim
+FROM node:20-trixie-slim
 
 WORKDIR /app
 
 COPY package.json ./
 COPY prisma ./prisma
 
-RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y openssl libgomp1 libvulkan1 && rm -rf /var/lib/apt/lists/*
 
 RUN npm install
+RUN if [ -d /app/node_modules/@kutalia/whisper-node-addon/dist/linux-x64 ]; then \
+      cp /app/node_modules/@kutalia/whisper-node-addon/dist/linux-x64/lib*.so* /usr/lib/x86_64-linux-gnu/ && ldconfig; \
+    fi
+RUN if [ -d /app/node_modules/@kutalia/whisper-node-addon/dist/linux-arm64 ]; then \
+      cp /app/node_modules/@kutalia/whisper-node-addon/dist/linux-arm64/lib*.so* /usr/lib/aarch64-linux-gnu/ && ldconfig; \
+    fi
 
 COPY . .
 

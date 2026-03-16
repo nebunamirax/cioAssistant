@@ -1,9 +1,11 @@
 import { type Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
+import { createAction } from "@/lib/services/action-service";
 import {
   meetingNoteFilterSchema,
   meetingNoteSchema,
   meetingNoteUpdateSchema,
+  type MeetingActionDraftInput,
   type MeetingNoteFilters,
   type MeetingNoteInput,
   type MeetingNoteUpdateInput
@@ -14,12 +16,12 @@ function toNullableString(value?: string | null) {
   return value?.trim() ? value : null;
 }
 
-function toJsonString(values?: string[]) {
+function toJsonString(values?: unknown[]) {
   if (values === undefined) return undefined;
   return JSON.stringify(values);
 }
 
-function parseJsonArray(value?: string | null) {
+function parseStringArrayJson(value?: string | null) {
   if (!value) {
     return [];
   }
@@ -27,6 +29,41 @@ function parseJsonArray(value?: string | null) {
   try {
     const parsed = JSON.parse(value);
     return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+function parseMeetingActionDrafts(value?: string | null): MeetingActionDraftInput[] {
+  if (!value) {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(value);
+
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    return parsed.flatMap((item): MeetingActionDraftInput[] => {
+      if (typeof item === "string") {
+        const title = item.trim();
+        return title ? [{ title, ownerName: null, dueDate: null, notes: item, createdActionId: null }] : [];
+      }
+
+      if (!item || typeof item !== "object" || typeof item.title !== "string") {
+        return [];
+      }
+
+      return [{
+        title: item.title,
+        ownerName: typeof item.ownerName === "string" ? item.ownerName : null,
+        dueDate: typeof item.dueDate === "string" ? item.dueDate : null,
+        notes: typeof item.notes === "string" ? item.notes : null,
+        createdActionId: typeof item.createdActionId === "string" ? item.createdActionId : null
+      }];
+    });
   } catch {
     return [];
   }
@@ -45,11 +82,11 @@ function hydrateMeetingNote<T extends {
 }>(meetingNote: T) {
   return {
     ...meetingNote,
-    attendees: parseJsonArray(meetingNote.attendeesJson),
-    extractedActions: parseJsonArray(meetingNote.extractedActionsJson),
-    extractedDecisions: parseJsonArray(meetingNote.extractedDecisionsJson),
-    extractedRisks: parseJsonArray(meetingNote.extractedRisksJson),
-    extractedDeadlines: parseJsonArray(meetingNote.extractedDeadlinesJson)
+    attendees: parseStringArrayJson(meetingNote.attendeesJson),
+    extractedActions: parseMeetingActionDrafts(meetingNote.extractedActionsJson),
+    extractedDecisions: parseStringArrayJson(meetingNote.extractedDecisionsJson),
+    extractedRisks: parseStringArrayJson(meetingNote.extractedRisksJson),
+    extractedDeadlines: parseStringArrayJson(meetingNote.extractedDeadlinesJson)
   };
 }
 
@@ -148,4 +185,52 @@ export async function deleteMeetingNote(id: string) {
   return prisma.meetingNote.delete({
     where: { id }
   });
+}
+
+export async function createActionsFromMeetingNote(id: string) {
+  const meetingNote = await getMeetingNoteById(id);
+
+  if (!meetingNote) {
+    throw new Error("Meeting note not found");
+  }
+
+  const draftActions = meetingNote.extractedActions.filter((action) => !action.createdActionId && action.title.trim().length >= 3);
+  const createdActions: Awaited<ReturnType<typeof createAction>>[] = [];
+
+  for (const draft of draftActions) {
+    const created = await createAction({
+      title: draft.title,
+      description: draft.notes ?? meetingNote.summary ?? meetingNote.rawContent,
+      ownerName: draft.ownerName ?? null,
+      dueDate: draft.dueDate ?? null,
+      status: "TODO",
+      priority: "NORMAL",
+      projectId: meetingNote.projectId ?? null,
+      sourceType: "MEETING_NOTE",
+      sourceRef: `meeting-note:${meetingNote.id}`
+    });
+
+    createdActions.push(created);
+  }
+
+  if (createdActions.length === 0) {
+    return {
+      meetingNote,
+      createdActions: []
+    };
+  }
+
+  const updatedDrafts = meetingNote.extractedActions.map((draft) => {
+    const matched = createdActions.find((action) => action.title === draft.title && !draft.createdActionId);
+    return matched ? { ...draft, createdActionId: matched.id } : draft;
+  });
+
+  const updatedMeetingNote = await updateMeetingNote(id, {
+    extractedActions: updatedDrafts
+  });
+
+  return {
+    meetingNote: updatedMeetingNote,
+    createdActions
+  };
 }

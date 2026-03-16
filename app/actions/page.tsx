@@ -104,6 +104,7 @@ export default async function ActionsPage({ searchParams }: ActionsPageProps) {
               <thead>
                 <tr>
                   <th>Titre</th>
+                  <th>Responsable</th>
                   <th>Statut</th>
                   <th>Priorité</th>
                   <th>Projet</th>
@@ -119,6 +120,7 @@ export default async function ActionsPage({ searchParams }: ActionsPageProps) {
                         {action.title}
                       </Link>
                     </td>
+                    <td>{action.ownerName ?? "—"}</td>
                     <td>{action.status}</td>
                     <td>{action.priority}</td>
                     <td>{action.project?.title ?? "—"}</td>
@@ -132,7 +134,7 @@ export default async function ActionsPage({ searchParams }: ActionsPageProps) {
                 ))}
                 {actions.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="text-slate-500">
+                    <td colSpan={7} className="text-slate-500">
                       Aucune action.
                     </td>
                   </tr>
@@ -161,6 +163,7 @@ export default async function ActionsPage({ searchParams }: ActionsPageProps) {
               initialValues={selectedAction ? {
                 title: selectedAction.title,
                 description: selectedAction.description ?? "",
+                ownerName: selectedAction.ownerName ?? "",
                 status: selectedActionStatus,
                 priority: selectedActionPriority,
                 dueDate: selectedAction.dueDate ? new Date(selectedAction.dueDate).toISOString().slice(0, 16) : "",
@@ -174,8 +177,10 @@ export default async function ActionsPage({ searchParams }: ActionsPageProps) {
             <section className="workbench-panel panel-stat-list">
               <h3 className="panel-title">Contexte</h3>
               <p><strong>Projet:</strong> {selectedAction.project?.title ?? "—"}</p>
+              <p><strong>Responsable:</strong> {selectedAction.ownerName ?? "—"}</p>
               <p><strong>Fournisseur:</strong> {selectedAction.vendor?.name ?? "—"}</p>
               <p><strong>Contrat:</strong> {selectedAction.contract?.title ?? "—"}</p>
+              <p><strong>Source:</strong> {selectedAction.sourceType === "MEETING_NOTE" ? selectedAction.sourceRef ?? "Réunion" : selectedAction.sourceRef ?? "—"}</p>
               <p><strong>Créée le:</strong> {new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium", timeStyle: "short" }).format(selectedAction.createdAt)}</p>
               <p><strong>Terminée le:</strong> {selectedAction.completedAt ? new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium", timeStyle: "short" }).format(selectedAction.completedAt) : "—"}</p>
             </section>

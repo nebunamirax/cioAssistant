@@ -133,7 +133,7 @@ Critères d'acceptation:
 ### Lot 5 - Audio et réunions
 Objectif: permettre transcription puis synthèse de réunion.
 
-Statut: non démarré
+Statut: partiellement préparé côté UI réunion, non démarré sur la création d’actions depuis CR
 
 Travaux:
 - support upload audio
@@ -147,11 +147,16 @@ Travaux:
   - blockers[]
   - nextSteps[]
 - création ou préremplissage de `MeetingNote`, `Action`, `Communication`
+- enrichir `actions[]` pour porter un responsable explicite par action
+- permettre depuis l’UI réunion de transformer les actions extraites en vraies entrées `Action`
+- préserver la traçabilité entre réunion source et actions créées
 
 Critères d'acceptation:
 - un fichier audio produit une transcription
 - la synthèse de réunion est lisible et exploitable
 - les actions détectées peuvent être créées directement ou envoyées en revue
+- chaque action créée depuis un CR peut afficher un responsable explicite
+- la réunion source reste retrouvable depuis l’action créée
 
 ## Backlog détaillé
 
@@ -169,6 +174,11 @@ Critères d'acceptation:
   - créations multiples
   - demandes envoyées en revue
   - transcription et synthèse de réunion
+- Pour le module réunions:
+  - commencer la saisie par le champ brut
+  - proposer une action explicite de génération avant sauvegarde
+  - afficher les actions extraites avec responsable, échéance et état de création
+  - permettre de sélectionner quelles actions créer réellement
 
 ### Backend API
 - Endpoint livré: `POST /api/assistant/messages`.
@@ -181,6 +191,10 @@ Critères d'acceptation:
   - `reviews[]`
   - `transcript`
   - `summary`
+- Préparer aussi pour les réunions:
+  - un endpoint de génération de brouillon réunion depuis le brut
+  - un endpoint futur de création d’actions depuis `MeetingNote`
+  - un contrat de payload incluant `title`, `ownerName`, `dueDate`, `notes`, `meetingNoteId`
 
 ### Orchestration IA
 - Le rôle d’orchestrateur est actuellement porté par [lib/services/ai-intake-service.ts](/Users/nebunamirax/Documents/Dev/cioAssistant/lib/services/ai-intake-service.ts).
@@ -193,6 +207,13 @@ Critères d'acceptation:
   6. exécuter si confiance suffisante
   7. sinon envoyer en revue
 - Garder la possibilité de second call ciblé par module en revue.
+- Pour les réunions, prévoir un schéma d’extraction action enrichi:
+  - `title`
+  - `ownerName`
+  - `dueDate`
+  - `notes`
+  - `confidence`
+- Le système ne doit pas forcer un responsable inventé: si le CR ne permet pas d’identifier un porteur fiable, l’action reste sans responsable et l’UI doit le signaler.
 
 ### Modèle de données
 - Conserver `AIIntakeReview`.
@@ -206,6 +227,53 @@ Critères d'acceptation:
   - nom de fichier
   - provider/model utilisés
   - résultat orchestration
+- Préparation spécifique réunions / actions:
+  - faire évoluer `Action` pour porter un responsable explicite
+  - trancher entre relation directe `Action.meetingNoteId` et table dédiée de brouillons d’actions de réunion
+  - documenter le schéma Prisma avant migration
+
+## Besoin complémentaire - Création d'actions depuis les comptes-rendus
+
+### Besoin produit
+- Depuis une réunion saisie ou synthétisée, l’utilisateur doit pouvoir transformer les actions extraites en vraies entrées `Action` sans ressaisie.
+- Chaque action issue d’un compte-rendu doit pouvoir afficher:
+  - un intitulé clair
+  - un responsable explicite quand il est identifiable
+  - une échéance si elle est mentionnée
+  - un lien de traçabilité vers la réunion source
+- Le flux ne doit pas créer automatiquement des actions douteuses ou attribuées arbitrairement au mauvais responsable.
+
+### Travail préparatoire de dev à finaliser dans la doc avant code
+1. Trancher le modèle de responsabilité:
+   - champ texte léger `ownerName` / `assigneeName`
+   - ou vraie relation future vers `User` si la roadmap multi-utilisateur l’exige plus tôt
+2. Trancher le modèle de traçabilité:
+   - relation directe `Action.meetingNoteId`
+   - ou table `MeetingActionDraft` / `MeetingActionLink`
+3. Définir le contrat d’extraction réunion:
+   - `title`
+   - `ownerName`
+   - `dueDate`
+   - `notes`
+   - `confidence`
+4. Définir le workflow UX:
+   - génération depuis le brut
+   - revue des actions extraites
+   - sélection des actions à créer
+   - création unitaire ou en lot
+5. Préparer les migrations et impacts:
+   - Prisma
+   - validation Zod
+   - services `meeting-note` et `action`
+   - affichage du responsable dans le module actions
+
+### Ordre recommandé pour le futur dev
+1. Migration Prisma pour le responsable et la traçabilité réunion -> action
+2. Mise à jour des schémas Zod `Action`
+3. Extension du draft réunion pour extraire des actions structurées avec responsable
+4. Endpoint de création d’actions depuis réunion
+5. UI de revue / sélection / création depuis `/meetings`
+6. Vérification bout en bout via tests service + UI
 
 ### Intégration transcription
 - Définir une abstraction `TranscriptionProvider`.

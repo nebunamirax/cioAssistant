@@ -126,7 +126,12 @@ docs/
 - L'assistant accepte aujourd'hui sur la même surface:
   - texte libre
   - document (`txt`, `md`, `csv`, `json`, `eml`, `pdf`, `docx`)
-- L'audio via micro et fichier audio reste prévu, mais n'est pas encore implémenté.
+- `/meetings` accepte maintenant un fichier audio ou une note vocale, transcrits avant synthèse.
+- La transcription audio locale peut être branchée de trois façons:
+  - moteur embarqué Node dans l’app avec `@kutalia/whisper-node-addon`
+  - `whisper.cpp` via `AI_AUDIO_TRANSCRIPTION_BACKEND=whispercpp`
+  - une commande locale personnalisée via `AI_AUDIO_TRANSCRIPTION_COMMAND`
+  - un endpoint compatible audio local via `AI_AUDIO_TRANSCRIPTION_BASE_URL`
 - Le backend convertit les documents texte en texte exploitable avant raisonnement métier.
 - Le flux IA fait d'abord une planification sémantique de la demande, puis extrait les champs utiles étape par étape avant exécution si la confiance est suffisante.
 - Si le routage est ambigu, la demande part en revue manuelle, avec possibilité de sélectionner un module puis de relancer une extraction ciblée des champs pour ce module.
@@ -159,6 +164,30 @@ npx prisma generate
 npx prisma migrate dev --name init
 npm run dev
 ```
+
+## Transcription audio locale
+Pour le moteur embarqué directement dans l’app, la config minimale attendue est:
+
+```bash
+AI_AUDIO_TRANSCRIPTION_BACKEND=embedded
+AI_AUDIO_TRANSCRIPTION_EMBEDDED_MODEL=/chemin/vers/ggml-base.bin
+AI_AUDIO_TRANSCRIPTION_EMBEDDED_THREADS=4
+AI_AUDIO_TRANSCRIPTION_EMBEDDED_USE_GPU=false
+```
+
+Ce mode utilise le binding Node embarqué en priorité dans le serveur Next.
+Si le fichier [`.models/ggml-base.bin`](/Users/nebunamirax/Documents/Dev/cioAssistant/.models/ggml-base.bin) existe, il est detecte automatiquement sans variable supplementaire.
+
+Pour `whisper.cpp`, la config minimale attendue est:
+
+```bash
+AI_AUDIO_TRANSCRIPTION_BACKEND=whispercpp
+AI_AUDIO_TRANSCRIPTION_WHISPER_CPP_BIN=/chemin/vers/whisper-cli
+AI_AUDIO_TRANSCRIPTION_WHISPER_CPP_MODEL=/chemin/vers/ggml-base.bin
+AI_AUDIO_TRANSCRIPTION_WHISPER_CPP_THREADS=4
+```
+
+Le flux `/meetings` utilisera alors `whisper.cpp` avant tout fallback compatible.
 
 ## Docker
 Pour vérifier le projet sans installer Node sur la machine hôte :

@@ -1,5 +1,6 @@
 services:
   app:
+    platform: linux/amd64
     build:
       context: .
       dockerfile: Dockerfile
@@ -13,6 +14,7 @@ services:
     command: sh -lc "npx prisma db push && npm run dev"
 
   verify:
+    platform: linux/amd64
     build:
       context: .
       dockerfile: Dockerfile
@@ -24,6 +26,7 @@ services:
     command: sh -lc "npm run test:run && npx prisma db push && npm run lint && npm run build"
 
   test:
+    platform: linux/amd64
     build:
       context: .
       dockerfile: Dockerfile

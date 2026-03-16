@@ -4,6 +4,7 @@ import { z } from "zod";
 export const actionSchema = z.object({
   title: z.string().min(3),
   description: z.string().optional(),
+  ownerName: z.string().optional().nullable(),
   status: z.enum(ACTION_STATUSES).default("TODO"),
   priority: z.enum(PRIORITIES).default("NORMAL"),
   dueDate: z.string().datetime().optional().nullable(),

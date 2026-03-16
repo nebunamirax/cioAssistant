@@ -91,7 +91,17 @@
 - Cette logique doit aussi s'appliquer aux `PDF` de contrats: même si la création auto échoue, les dates, montants, fournisseur et intitulé doivent rester récupérables dans le brouillon.
 
 ## Réunions et audio
-- Le micro et l’upload audio sont des entrées prévues, pas encore livrées.
+- `/meetings` accepte maintenant:
+  - un fichier audio déposé depuis le poste
+  - une note vocale enregistrée depuis le micro du navigateur
+- Le serveur transcrit l’audio en texte avant de réinjecter le résultat dans le champ `Compte-rendu brut`.
+- La synthèse réunion continue ensuite de s’appuyer sur le même pipeline que pour le texte collé.
+- La transcription audio actuelle vise un fonctionnement local:
+  - moteur embarqué dans l’app via binding Node `whisper.cpp`
+  - `whisper.cpp` si `AI_AUDIO_TRANSCRIPTION_BACKEND=whispercpp`
+  - commande locale configurable via `AI_AUDIO_TRANSCRIPTION_COMMAND`
+  - ou endpoint compatible audio local via `/audio/transcriptions`
+- Un modèle texte Mistral classique ne suffit pas pour cette brique; il faut soit un moteur STT dédié, soit un modèle audio-capable exposé par l’infra locale.
 - Les usages cibles restent:
   - transcription brute
   - synthèse de réunion

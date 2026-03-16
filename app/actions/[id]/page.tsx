@@ -36,6 +36,7 @@ export default async function ActionDetailPage({ params }: { params: { id: strin
           initialValues={{
             title: action.title,
             description: action.description ?? "",
+            ownerName: action.ownerName ?? "",
             status,
             priority,
             dueDate: action.dueDate ? new Date(action.dueDate).toISOString().slice(0, 16) : "",
@@ -45,8 +46,10 @@ export default async function ActionDetailPage({ params }: { params: { id: strin
         <section className="space-y-3 rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-700">
           <h2 className="font-semibold text-slate-900">Contexte</h2>
           <p><strong>Projet:</strong> {action.project?.title ?? "—"}</p>
+          <p><strong>Responsable:</strong> {action.ownerName ?? "—"}</p>
           <p><strong>Fournisseur:</strong> {action.vendor?.name ?? "—"}</p>
           <p><strong>Contrat:</strong> {action.contract?.title ?? "—"}</p>
+          <p><strong>Source:</strong> {action.sourceType === "MEETING_NOTE" ? action.sourceRef ?? "Réunion" : action.sourceRef ?? "—"}</p>
           <p><strong>Créée le:</strong> {new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium", timeStyle: "short" }).format(action.createdAt)}</p>
           <p><strong>Terminée le:</strong> {action.completedAt ? new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium", timeStyle: "short" }).format(action.completedAt) : "—"}</p>
         </section>

@@ -62,6 +62,10 @@
 - Détail d'action sur `/actions/[id]` avec édition via `PATCH /api/actions/[id]`.
 - Suppression via `DELETE /api/actions/[id]`.
 - Le service `lib/services/action-service.ts` centralise la normalisation des champs optionnels et la gestion de `completedAt`.
+- Évolution prévue:
+  - ajout d’un responsable métier explicite sur l’action
+  - création d’actions directement depuis une note de réunion ou un compte-rendu synthétisé
+  - conservation de la traçabilité vers la réunion source
 
 ## Module Projets
 - Liste serveur avec filtres `search`, `type`, `status` et `priority`.
@@ -104,8 +108,20 @@
 - Liste serveur avec filtres `search` et `projectId`.
 - `/meetings` fonctionne comme un workbench de compte-rendu: liste, édition et contexte cohabitent sur le même écran.
 - Le formulaire structure titre, date, projet, participants, brut, synthèse et listes extraites.
+- Le point d’entrée UX du panneau est désormais le champ brut, avec génération de synthèse avant sauvegarde.
 - Le service `lib/services/meeting-note-service.ts` centralise les filtres, la sérialisation JSON des listes et la restitution d’un format exploitable côté UI.
-- L’audio et la transcription restent un lot ultérieur, mais le module métier récepteur existe désormais.
+- Le service `lib/services/meeting-note-draft-service.ts` prépare un brouillon à partir du brut pour préremplir synthèse, actions, décisions, risques et échéances.
+- Évolution prévue:
+  - action de création d’actions à partir des éléments extraits
+  - affectation d’un responsable par action détectée
+  - conservation du lien entre `MeetingNote` et actions créées
+- `/meetings` intègre désormais un point d’entrée audio léger:
+  - upload de fichier audio
+  - enregistrement micro navigateur
+  - transcription serveur puis réinjection dans `rawContent`
+- La transcription audio passe actuellement par un service dédié distinct du provider de synthèse:
+  - commande locale configurable
+  - ou endpoint compatible audio local
 
 ## Validation et exécution
 - L'environnement de vérification cible passe par Docker Compose.

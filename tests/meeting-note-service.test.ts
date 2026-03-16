@@ -10,8 +10,14 @@ const prismaMock = {
   }
 };
 
+const createActionMock = vi.fn();
+
 vi.mock("@/lib/db/prisma", () => ({
   prisma: prismaMock
+}));
+
+vi.mock("@/lib/services/action-service", () => ({
+  createAction: createActionMock
 }));
 
 describe("meeting-note-service", () => {
@@ -21,6 +27,7 @@ describe("meeting-note-service", () => {
     prismaMock.meetingNote.findMany.mockReset();
     prismaMock.meetingNote.findUnique.mockReset();
     prismaMock.meetingNote.update.mockReset();
+    createActionMock.mockReset();
   });
 
   it("liste les notes de reunion avec projet et tableaux hydratés", async () => {
@@ -50,7 +57,7 @@ describe("meeting-note-service", () => {
       expect.objectContaining({
         id: "m1",
         attendees: ["DSI", "RSSI"],
-        extractedActions: ["Relancer l'editeur"],
+        extractedActions: [{ title: "Relancer l'editeur", ownerName: null, dueDate: null, notes: "Relancer l'editeur", createdActionId: null }],
         extractedDecisions: ["Valider le budget"],
         extractedRisks: ["Derive planning"],
         extractedDeadlines: ["2026-04-15"]
@@ -103,7 +110,7 @@ describe("meeting-note-service", () => {
       attendees: ["DSI", "RSSI"],
       rawContent: "Compte-rendu brut",
       summary: "",
-      extractedActions: ["Faire le point budget"],
+      extractedActions: [{ title: "Faire le point budget", ownerName: "Max", dueDate: null, notes: "Faire le point budget", createdActionId: null }],
       extractedDecisions: [],
       extractedRisks: ["Retard fournisseur"],
       extractedDeadlines: ["2026-03-20"]
@@ -117,7 +124,7 @@ describe("meeting-note-service", () => {
         attendeesJson: JSON.stringify(["DSI", "RSSI"]),
         rawContent: "Compte-rendu brut",
         summary: null,
-        extractedActionsJson: JSON.stringify(["Faire le point budget"]),
+        extractedActionsJson: JSON.stringify([{ title: "Faire le point budget", ownerName: "Max", dueDate: null, notes: "Faire le point budget", createdActionId: null }]),
         extractedDecisionsJson: JSON.stringify([]),
         extractedRisksJson: JSON.stringify(["Retard fournisseur"]),
         extractedDeadlinesJson: JSON.stringify(["2026-03-20"])
@@ -163,5 +170,53 @@ describe("meeting-note-service", () => {
     expect(prismaMock.meetingNote.delete).toHaveBeenCalledWith({
       where: { id: "m1" }
     });
+  });
+
+  it("cree les actions depuis une reunion et marque les brouillons comme crees", async () => {
+    prismaMock.meetingNote.findUnique.mockResolvedValueOnce({
+      id: "m1",
+      projectId: "p1",
+      title: "Codir",
+      meetingDate: new Date("2026-03-16T09:00:00.000Z"),
+      attendeesJson: "[]",
+      rawContent: "Compte-rendu brut",
+      summary: "Synthese",
+      extractedActionsJson: JSON.stringify([
+        { title: "Relancer l'editeur", ownerName: "Max", dueDate: "2026-04-20T09:00:00.000Z", notes: "Action prioritaire", createdActionId: null }
+      ]),
+      extractedDecisionsJson: "[]",
+      extractedRisksJson: "[]",
+      extractedDeadlinesJson: "[]",
+      project: { id: "p1", title: "ERP" }
+    });
+    createActionMock.mockResolvedValueOnce({ id: "a1", title: "Relancer l'editeur" });
+    prismaMock.meetingNote.update.mockResolvedValueOnce({
+      id: "m1",
+      attendeesJson: "[]",
+      extractedActionsJson: JSON.stringify([
+        { title: "Relancer l'editeur", ownerName: "Max", dueDate: "2026-04-20T09:00:00.000Z", notes: "Action prioritaire", createdActionId: "a1" }
+      ]),
+      extractedDecisionsJson: "[]",
+      extractedRisksJson: "[]",
+      extractedDeadlinesJson: "[]",
+      project: { id: "p1", title: "ERP" }
+    });
+
+    const { createActionsFromMeetingNote } = await import("@/lib/services/meeting-note-service");
+    const result = await createActionsFromMeetingNote("m1");
+
+    expect(createActionMock).toHaveBeenCalledWith({
+      title: "Relancer l'editeur",
+      description: "Action prioritaire",
+      ownerName: "Max",
+      dueDate: "2026-04-20T09:00:00.000Z",
+      status: "TODO",
+      priority: "NORMAL",
+      projectId: "p1",
+      sourceType: "MEETING_NOTE",
+      sourceRef: "meeting-note:m1"
+    });
+    expect(result.createdActions).toEqual([{ id: "a1", title: "Relancer l'editeur" }]);
+    expect(prismaMock.meetingNote.update).toHaveBeenCalled();
   });
 });

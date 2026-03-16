@@ -41,6 +41,7 @@ model Action {
   id            String       @id @default(cuid())
   title         String
   description   String?
+  ownerName     String?
   status        String       @default("TODO")
   priority      String       @default("NORMAL")
   dueDate       DateTime?
