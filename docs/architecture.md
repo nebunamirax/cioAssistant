@@ -6,6 +6,7 @@
 - Layout racine avec sidebar pour la navigation.
 - Les modules principaux privilégient un affichage dense de type workbench: entête de synthèse, filtres, table de navigation, panneau d'édition et panneau de contexte sur la même page.
 - La page `/` est désormais un assistant conversationnel unique, servant d'entrée transverse aux modules métier.
+- Le module `Actions` doit désormais supporter deux rendus d'un même workbench: `list` et `kanban`.
 
 ## Stratégie mobile
 - La cible mobile du MVP est une application web responsive, pas une application native iOS/Android.
@@ -70,12 +71,36 @@
 
 ## Module Actions
 - Liste serveur avec filtres `search`, `status`, `priority` et `overdueOnly`.
-- `/actions` fonctionne comme un cockpit opérationnel: liste, édition et contexte cohabitent pour limiter la navigation.
+- `/actions` fonctionne comme un cockpit opérationnel: filtres, visualisation, édition et contexte cohabitent pour limiter la navigation.
+- Le mode d'affichage devient un état d'interface explicite, porté par l'URL avec `view=list|kanban`.
+- La vue `list` reste la vue tabulaire dense actuelle.
+- La vue `kanban` regroupe les mêmes actions par `status`, avec une colonne par statut métier existant.
+- Le panneau latéral d'édition et de contexte reste unique et doit continuer à fonctionner quel que soit le mode d'affichage.
+- Les filtres restent partagés entre les deux vues. Un changement de filtre doit recalculer simultanément la liste ou les colonnes kanban sur le même jeu de données.
+- La sélection d'une action reste portée par `selectedId` dans l'URL pour conserver un comportement stable entre navigation, rafraîchissement et changement de vue.
+- En MVP, le déplacement d'une carte entre colonnes peut s'appuyer sur la mise à jour unitaire existante via `PATCH /api/actions/[id]` en changeant `status`.
+- Aucun endpoint spécifique au kanban n'est requis dans un premier temps si la volumétrie reste faible à moyenne.
+- En MVP, l'ordre intra-colonne ne devient pas une donnée métier. Les cartes peuvent reprendre l'ordre serveur existant `dueDate asc`, puis `createdAt desc`.
+- Si un besoin de réordonnancement manuel apparaît ensuite, il faudra introduire un champ dédié de type `position` ou `sortKey` sur `Action`, plus une API batch ou transactionnelle.
 - Détail d'action sur `/actions/[id]` avec édition via `PATCH /api/actions/[id]`.
 - Suppression via `DELETE /api/actions/[id]`.
 - Le service `lib/services/action-service.ts` centralise la normalisation des champs optionnels et la gestion de `completedAt`.
+- Découpage technique recommandé pour l'évolution:
+  - extraire un composant conteneur `ActionsWorkbench` chargé de lire `searchParams` et de construire les URLs de filtre, vue et sélection
+  - conserver `ActionFilters` comme barre commune
+  - isoler un composant `ActionListView` pour la table
+  - ajouter un composant `ActionKanbanView` pour les colonnes et cartes
+  - conserver `ActionForm` et le panneau de contexte comme briques communes
+- Contrat de données UI recommandé pour le kanban:
+  - entrée: tableau d'actions déjà filtré côté serveur
+  - transformation locale: groupement par `status`
+  - action utilisateur principale: sélectionner une carte ou changer son statut par drag and drop
+- Contraintes d'implémentation:
+  - le drag and drop doit rester compatible clavier ou disposer d'un fallback explicite par menu de changement de statut
+  - le déplacement d'une carte doit mettre à jour l'UI de manière optimiste, puis resynchroniser avec `router.refresh()`
+  - en cas d'échec de mise à jour, la carte doit revenir dans sa colonne d'origine avec message d'erreur visible
 - Évolution prévue:
-  - ajout d’un responsable métier explicite sur l’action
+  - finalisation de la vue kanban type Trello avec déplacement de cartes
   - création d’actions directement depuis une note de réunion ou un compte-rendu synthétisé
   - conservation de la traçabilité vers la réunion source
 

@@ -76,6 +76,14 @@ docs/
 - La densité visuelle doit privilégier la vitesse de lecture et de décision, pas l'effet carte par carte.
 - Les formulaires d'édition doivent être découpés par sections métier compréhensibles, avec une hiérarchie claire entre champs essentiels, champs de pilotage et champs optionnels.
 - En mode édition, les champs doivent être préremplis avec les données de l'entrée sélectionnée, sans répéter inutilement ces valeurs dans l'entête du panneau.
+- Pour `Actions`, l'utilisateur doit pouvoir basculer entre deux représentations d'un même portefeuille:
+  - une vue `Liste` dense pour scanner, filtrer et éditer rapidement
+  - une vue `Kanban` de type Trello pour piloter visuellement l'avancement de toutes les actions
+- La bascule de vue ne doit pas changer le périmètre de données affichées: mêmes filtres, même sélection, même panneau d'édition, seul le mode de visualisation change.
+- En vue `Kanban`, les colonnes de référence sont les statuts métier existants: `TODO`, `IN_PROGRESS`, `BLOCKED`, `WAITING`, `DONE`.
+- Une action déplacée d'une colonne à une autre doit mettre à jour immédiatement son `status`.
+- Le MVP n'a pas besoin de gérer un ordre manuel persistant dans une colonne. L'ordre peut rester piloté par les règles existantes (`dueDate`, puis `createdAt`) tant qu'il reste cohérent entre liste et kanban.
+- L'état de vue choisi doit rester partageable et restaurable via l'URL, pour éviter de perdre le contexte au rafraîchissement.
 
 ## Endpoints API
 - `GET|POST /api/actions`

@@ -36,10 +36,23 @@
   - référence à la réunion source
   - statut de création depuis extraction (`draft extracted`, `created`, `discarded`) si l’on veut garder la piste d’audit côté réunion
 
+## Focus Actions / Vue Kanban
+- Le besoin de vue kanban ne nécessite pas de changement de modèle pour une première itération.
+- Le regroupement en colonnes repose sur `Action.status`, déjà présent et aligné avec les colonnes cibles `TODO`, `IN_PROGRESS`, `BLOCKED`, `WAITING`, `DONE`.
+- Le déplacement d'une carte entre colonnes correspond à une simple mise à jour de `status`.
+- Tant que l'ordre visuel dans une colonne reste dérivé du tri serveur (`dueDate`, puis `createdAt`), aucun champ supplémentaire n'est nécessaire.
+- Si un ordre manuel de type Trello devient un vrai besoin produit, prévoir alors:
+  - un champ `position` ou `sortKey` sur `Action`
+  - une stratégie de réindexation lors d'un déplacement dans une colonne
+  - potentiellement un endpoint batch pour déplacer plusieurs cartes sans incohérence transitoire
+
 ## Préparation de modèle recommandée
 - `Action`:
   - ajouter un champ `ownerName` ou `assigneeName` selon la convention retenue
   - ajouter un champ `meetingNoteId` nullable si l’on choisit une relation directe action -> réunion
+- `Action` pour la vue kanban:
+  - ne pas ajouter de champ dédié tant que le besoin se limite à une bascule liste / kanban avec changement de statut
+  - introduire `position` seulement si le tri manuel intra-colonne devient une exigence fonctionnelle validée
 - `MeetingNote`:
   - soit conserver les extractions en JSON mais enrichir le format pour inclure `owner`, `dueDate`, `status`
   - soit introduire une table dédiée de type `MeetingActionDraft` si l’on veut un workflow plus robuste avant création finale

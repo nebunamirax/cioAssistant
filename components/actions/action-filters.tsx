@@ -7,11 +7,13 @@ type ActionFiltersProps = {
     priority?: string;
     overdueOnly?: boolean;
   };
+  view?: "list" | "kanban";
 };
 
-export function ActionFilters({ values }: ActionFiltersProps) {
+export function ActionFilters({ values, view = "list" }: ActionFiltersProps) {
   return (
     <form className="workbench-toolbar">
+      <input type="hidden" name="view" value={view} />
       <input
         type="search"
         name="search"
