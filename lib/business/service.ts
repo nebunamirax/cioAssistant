@@ -12,10 +12,11 @@ import { createMeetingNote, updateMeetingNote } from "@/lib/services/meeting-not
 import { reportContent, saveMonthlyDraft } from "@/lib/services/monthly-report-service";
 import { saveMilestone, saveObjective } from "@/lib/services/portfolio-write-service";
 import { createProject, updateProject } from "@/lib/services/project-service";
+import { getRoadmapActions, getRoadmapProject, getRoadmapProjects } from "@/lib/services/roadmap-service";
 import { createRisk, updateRisk } from "@/lib/services/risk-service";
 import { recordControl, saveService } from "@/lib/services/support-service";
 import { createVendor, updateVendor } from "@/lib/services/vendor-service";
-import { entities, entityName, getFields, meetingBatch, searchFields, type EntityName } from "./contracts";
+import { entities, entityName, getFields, meetingBatch, roadmapFields, searchFields, type EntityName } from "./contracts";
 
 type Db = Prisma.TransactionClient;
 type Actor = { id: string; name: string; role: string };
@@ -80,6 +81,33 @@ export async function getBusiness(input: z.infer<typeof getFields>) {
   const row = await model.findUnique({ where: { [route.key]: id }, select: entity === "member" ? memberPublic : undefined });
   if (!row) throw new BusinessError("Fiche introuvable.", 404);
   return { ...reference(entity, row), data: row };
+}
+
+export async function readBusinessRoadmap({ projectId, status, limit, offset }: z.infer<typeof roadmapFields>) {
+  function projectSummary(project: NonNullable<Awaited<ReturnType<typeof getRoadmapProject>>>) {
+    const { _count, milestones, ...data } = project;
+    return {
+      ...reference("project", project), ...data, actionCount: _count.actions,
+      milestones: milestones.map((milestone) => ({ ...reference("milestone", { ...milestone, projectId: project.id }), ...milestone }))
+    };
+  }
+
+  if (projectId) {
+    const project = await getRoadmapProject(projectId);
+    if (!project) throw new BusinessError("Projet introuvable.", 404);
+    const actions = await getRoadmapActions(projectId, { limit: limit + 1, offset });
+    return {
+      project: projectSummary(project),
+      actions: actions.slice(0, limit).map(({ owner, ownerName, ...action }) => ({ ...reference("action", action), ...action, ownerName: owner?.name ?? ownerName })),
+      nextOffset: actions.length > limit ? offset + limit : null
+    };
+  }
+
+  const projects = await getRoadmapProjects({ status, limit: limit + 1, offset });
+  return {
+    projects: projects.slice(0, limit).map(projectSummary),
+    nextOffset: projects.length > limit ? offset + limit : null
+  };
 }
 
 async function resolveProject(db: Db, name: string) {

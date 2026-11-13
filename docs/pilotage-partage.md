@@ -1,5 +1,30 @@
 # Pilotage DSI partagé
 
+## Installer sur le PC du bureau
+
+Démarrez Docker Desktop en mode conteneurs Linux. Si le dépôt manque sur le PC, récupérez-le avec `git clone https://github.com/nebunamirax/cioAssistant.git`, puis ouvrez PowerShell dans le dossier `cioAssistant`.
+
+```powershell
+git pull --ff-only origin main
+docker compose up -d --build app
+```
+
+Lorsque la page de connexion s’affiche sur [Pilotage DSI](http://localhost:3000), créez le compte DSI local pour une première installation. PowerShell masque la saisie du mot de passe de 16 caractères minimum.
+
+```powershell
+& {
+  $OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+  $cioPassword = Read-Host "Mot de passe DSI local" -AsSecureString
+  try {
+    [System.Net.NetworkCredential]::new('', $cioPassword).Password | docker compose exec -T app ./node_modules/.bin/tsx scripts/account.ts local
+  } finally {
+    $cioPassword.Dispose()
+  }
+}
+```
+
+Connectez-vous, puis suivez la section [Claude Desktop](#claude-desktop). Si le port 3000 est occupé, définissez `CIO_HTTP_PORT=3080` dans `.env`, relancez `docker compose up -d app` et utilisez `http://localhost:3080` dans les deux applications. Si `.env` contient déjà `CIO_PUBLIC_URL`, alignez cette adresse sur le port choisi. Le port Docker reste publié sur la boucle locale et le volume `app-data` conserve les données.
+
 ## Mettre à jour l’instance existante
 
 Lancer les commandes depuis le même projet Compose que l’instance en cours pour retrouver le volume `app-data`. Conserver son nom de projet si l’instance a été lancée avec `-p`.
@@ -12,6 +37,10 @@ docker compose run --rm --no-deps app node scripts/database.mjs adopt
 ```
 
 La commande d’adoption reconnaît le schéma avant toute écriture. Elle réalise une sauvegarde datée dans le volume, puis inscrit les migrations déjà présentes. Si elle signale un schéma inconnu ou des références orphelines, conserver la base et examiner l’écart. Le démarrage contrôle de nouveau l’historique et applique uniquement les migrations restantes avec `prisma migrate deploy`. Une base neuve est initialisée au démarrage. [Adoption d’une base Prisma](https://www.prisma.io/docs/orm/prisma-migrate/workflows/baselining)
+
+Pour une instance locale, redémarrez avec `docker compose up -d app`.
+
+## Partager une instance sur le réseau en HTTPS
 
 Renseigner `CIO_PRIVATE_HOST` avec le DNS privé, `CIO_PRIVATE_IP` avec l’adresse privée d’écoute et `CIO_TLS_DIRECTORY` avec le dossier contenant `fullchain.pem` et `privkey.pem`. Le certificat doit correspondre au nom DNS et être approuvé par les postes de l’entreprise. L’overlay publie Nginx sur cette adresse en HTTPS. Le port direct de Next.js reste lié à la boucle locale. Pour utiliser un proxy d’entreprise déjà en place, configurer `CIO_PUBLIC_URL` à l’origine HTTPS publique sur le réseau privé et faire pointer le proxy vers l’application.
 
@@ -37,9 +66,14 @@ Connecter le DSI avec le secours, puis autoriser les membres depuis **Équipe** 
 
 ## Claude Desktop
 
-Dans **Paramètres → Intégrations → Claude**, télécharger `cio-assistant.mcpb` et créer un jeton dédié au poste. Installer l’extension dans Claude Desktop, puis fournir l’origine HTTPS et le jeton. Si le certificat est signé par une PKI interne, renseigner aussi le fichier PEM de l’autorité. Le jeton est affiché une seule fois. Pour le renouveler, créer le nouveau jeton, le renseigner dans l’extension, puis révoquer l’ancien dans la liste. [Extensions locales de Claude Desktop](https://support.claude.com/en/articles/10949351-getting-started-with-local-mcp-servers-on-claude-desktop)
+1. Dans CIO Assistant, ouvrez **Paramètres → Intégrations → Claude**, téléchargez `cio-assistant.mcpb` et créez un jeton dédié au poste. Copiez le jeton au moment de sa création.
+2. Dans Claude Desktop, ouvrez **Paramètres → Application de bureau → Extensions → Gérer → Paramètres avancés → Installer une extension**, puis sélectionnez le fichier téléchargé. Pour une extension déjà installée, installez le paquet mis à jour. [Extensions locales de Claude Desktop](https://support.claude.com/en/articles/10949351-getting-started-with-local-mcp-servers-on-claude-desktop)
+3. Collez le jeton et l’adresse affichée dans CIO Assistant. Utilisez `http://localhost:3000` lorsque Docker et Claude Desktop tournent sur le même PC. Pour une instance partagée, utilisez son adresse HTTPS et, si le certificat est signé par une PKI interne, ajoutez le fichier PEM de l’autorité.
+4. Dans une conversation Claude, ouvrez **+ → Connecteurs** et vérifiez que **CIO Assistant** apparaît. Essayez « Consulte la roadmap de CIO Assistant et résume les prochains jalons des projets actifs. »
 
-Le connecteur local parle MCP sur `stdio` et appelle `POST /api/v1/business` par HTTPS. Les outils d’écriture demandent une clé d’idempotence. Un rejeu avec la même clé et la même requête renvoie les identifiants et liens initiaux. Le compte rendu groupé enregistre la note et les fiches liées en une transaction. Une ambiguïté de projet ou de responsable renvoie les candidats. Les jetons prennent les droits actifs de leur titulaire DSI à chaque appel.
+Le paquet privé généré par Docker est non signé. Si l’installation est bloquée par la politique Claude Desktop du poste, demandez à l’administrateur Claude de l’autoriser. [Gestion des extensions en entreprise](https://support.claude.com/en/articles/10949351-getting-started-with-local-mcp-servers-on-claude-desktop)
+
+Le connecteur parle MCP sur `stdio` et appelle `POST /api/v1/business`. Il peut lire la roadmap et les fiches, modifier les projets, jalons et actions, ou enregistrer un compte rendu avec ses actions, risques et décisions en une transaction. Les outils d’écriture demandent une clé d’idempotence. Un rejeu avec la même clé et la même requête renvoie les identifiants et liens initiaux. Une ambiguïté de projet ou de responsable renvoie les candidats. Les jetons prennent les droits actifs de leur titulaire DSI à chaque appel. Pour renouveler un jeton, créez son remplaçant, renseignez-le dans Claude, puis révoquez l’ancien dans CIO Assistant.
 
 Pour une recette conversationnelle, utiliser un projet et un texte fictifs. Demander « Enregistre ce compte rendu dans le projet X, crée une action de suivi, un risque et une décision liée, puis donne-moi les liens ». Demander ensuite une modification de l’action, vérifier le cockpit et révoquer le jeton de test.
 
@@ -69,6 +103,6 @@ Les connexions Outlook et Planner utilisent les fichiers de session du volume et
 
 ## Recette Docker
 
-`docker compose run --rm verify` déploie les migrations sur une base neuve, lance les tests, ESLint et la recette d’intégration. Elle lance Next.js en production et un véritable client MCP contre le processus extrait du paquet, via un serveur HTTPS de test. `scripts/verify-migration.sh` vérifie aussi un volume historique monté en lecture seule, ajoute des fiches sur une copie, restaure vers un volume de test neuf et teste le refus d’un schéma inconnu.
+`docker compose run --rm verify` déploie les migrations sur une base neuve, lance les tests, ESLint et la recette d’intégration. Elle télécharge le paquet depuis CIO Assistant et démarre le connecteur extrait via un client MCP. Elle vérifie la lecture et l’écriture sur `localhost` en HTTP ainsi que l’accès via un serveur HTTPS de test. `scripts/verify-migration.sh` vérifie aussi un volume historique monté en lecture seule, ajoute des fiches sur une copie, restaure vers un volume de test neuf et teste le refus d’un schéma inconnu.
 
 La connexion réelle à Entra, la synchronisation sur Microsoft Graph et la conversation Claude Desktop nécessitent des comptes connectés dans les environnements concernés. Consigner ces essais séparément de la recette Docker.

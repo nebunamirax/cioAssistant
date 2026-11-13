@@ -1,6 +1,6 @@
 # CIO Assistant
 
-[Déploiement Docker partagé, connexion Microsoft et Claude Desktop](docs/pilotage-partage.md)
+[Installation sur un PC Windows avec Docker et Claude Desktop](docs/pilotage-partage.md#installer-sur-le-pc-du-bureau) · [Déploiement partagé et connexion Microsoft](docs/pilotage-partage.md#mettre-à-jour-linstance-existante)
 
 Application partagée pour piloter la DSI et répartir le suivi opérationnel. Le cockpit regroupe le portefeuille, les actions en retard ou bloquées, les risques et les arbitrages. La stratégie relie les objectifs aux projets. La vue Équipe répartit les actions ouvertes par responsable.
 

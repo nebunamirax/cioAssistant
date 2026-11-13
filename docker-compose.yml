@@ -13,7 +13,7 @@ services:
       - ./.models:/app/.models:ro
     environment:
       DATABASE_URL: file:/app/.data/cioassistant.db
-      CIO_PUBLIC_URL: ${CIO_PUBLIC_URL:-http://localhost:3000}
+      CIO_PUBLIC_URL: ${CIO_PUBLIC_URL:-http://localhost:${CIO_HTTP_PORT:-3000}}
       ENTRA_TENANT_ID: ${ENTRA_TENANT_ID:-}
       ENTRA_CLIENT_ID: ${ENTRA_CLIENT_ID:-}
       ENTRA_CLIENT_SECRET: ${ENTRA_CLIENT_SECRET:-}

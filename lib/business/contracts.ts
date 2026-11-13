@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { PROJECT_STATUSES } from "@/lib/domain/constants";
 import { actionSchema } from "@/lib/validation/action";
 import { budgetItemSchema } from "@/lib/validation/budget-item";
 import { communicationBaseSchema } from "@/lib/validation/communication";
@@ -47,3 +48,9 @@ export const meetingBatch = z.object({
   decisions: z.array(decision.strict()).max(40).default([])
 }).strict();
 export const reviewFields = z.object({ category: z.string().max(80).optional(), owner: name }).strict();
+export const roadmapFields = z.object({
+  projectId: idField.optional(),
+  status: z.enum(PROJECT_STATUSES).optional(),
+  limit: z.number().int().min(1).max(100).default(25),
+  offset: z.number().int().nonnegative().default(0)
+}).strict();

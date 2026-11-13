@@ -2,8 +2,8 @@ import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { digest } from "@/lib/auth/session";
 import { prisma } from "@/lib/db/prisma";
-import { getFields, keyField, meetingBatch, reviewFields, searchFields } from "@/lib/business/contracts";
-import { BusinessError, getBusiness, saveMeetingBatch, searchBusiness, writeBusiness } from "@/lib/business/service";
+import { getFields, keyField, meetingBatch, reviewFields, roadmapFields, searchFields } from "@/lib/business/contracts";
+import { BusinessError, getBusiness, readBusinessRoadmap, saveMeetingBatch, searchBusiness, writeBusiness } from "@/lib/business/service";
 import { weeklyReview } from "@/lib/services/weekly-review-service";
 import { listExternalAttention } from "@/lib/services/external-tracking-service";
 
@@ -25,7 +25,7 @@ function canonical(value: unknown): string {
   return JSON.stringify(value);
 }
 
-const envelope = z.object({ operation: z.enum(["search", "get", "create", "update", "meeting_batch", "weekly_review", "external_summary"]), input: z.record(z.unknown()) }).strict();
+const envelope = z.object({ operation: z.enum(["search", "get", "roadmap", "create", "update", "meeting_batch", "weekly_review", "external_summary"]), input: z.record(z.unknown()) }).strict();
 const json = (data: unknown, status = 200) => Response.json(data, { status, headers: { "Cache-Control": "no-store" } });
 
 export async function POST(request: Request) {
@@ -39,6 +39,7 @@ export async function POST(request: Request) {
     const { operation, input } = envelope.parse(JSON.parse(raw));
     if (operation === "search") return json({ data: await searchBusiness(searchFields.parse(input)) });
     if (operation === "get") return json({ data: await getBusiness(getFields.parse(input)) });
+    if (operation === "roadmap") return json({ data: await readBusinessRoadmap(roadmapFields.parse(input)) });
     if (operation === "external_summary") {
       const data = await listExternalAttention(new Date(), z.number().int().min(1).max(100).default(20).parse(input.limit));
       return json({ data });

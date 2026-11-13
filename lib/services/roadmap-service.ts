@@ -1,6 +1,15 @@
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 
 export type RoadmapProject = Awaited<ReturnType<typeof getRoadmapData>>["projects"][number];
+
+const projectSelection = {
+  id: true, title: true, status: true, priority: true, startDate: true, targetDate: true,
+  owner: { select: { name: true } },
+  objective: { select: { id: true, title: true } },
+  milestones: { select: { id: true, dueDate: true, title: true, status: true }, orderBy: [{ dueDate: { sort: "asc", nulls: "last" } }, { title: "asc" }] },
+  _count: { select: { actions: true } }
+} satisfies Prisma.ProjectSelect;
 
 function startOfMonth(date: Date) {
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1));
@@ -15,29 +24,35 @@ export function buildRoadmapMonths(anchor = new Date(), count = 9) {
   return Array.from({ length: count }, (_, index) => addMonths(first, index));
 }
 
+export function getRoadmapProjects(options: { status?: string; limit?: number; offset?: number } = {}) {
+  return prisma.project.findMany({
+    where: { status: options.status ?? { not: "CANCELLED" } },
+    select: projectSelection,
+    orderBy: [{ targetDate: { sort: "asc", nulls: "last" } }, { title: "asc" }, { id: "asc" }],
+    skip: options.offset,
+    take: options.limit
+  });
+}
+
+export function getRoadmapProject(projectId: string) {
+  return prisma.project.findUnique({ where: { id: projectId }, select: projectSelection });
+}
+
 export async function getRoadmapData() {
   const [projects, unassignedCount] = await Promise.all([
-    prisma.project.findMany({
-      where: { status: { not: "CANCELLED" } },
-      select: {
-        id: true, title: true, status: true, priority: true, startDate: true, targetDate: true,
-        owner: { select: { name: true } },
-        objective: { select: { id: true, title: true } },
-        milestones: { select: { id: true, dueDate: true, title: true, status: true }, orderBy: [{ dueDate: { sort: "asc", nulls: "last" } }, { title: "asc" }] },
-        _count: { select: { actions: true } }
-      },
-      orderBy: [{ targetDate: { sort: "asc", nulls: "last" } }, { title: "asc" }]
-    }),
+    getRoadmapProjects(),
     prisma.action.count({ where: { projectId: null, status: { not: "DONE" } } })
   ]);
   return { projects, unassignedCount };
 }
 
-export function getRoadmapActions(projectId: string) {
+export function getRoadmapActions(projectId: string, options: { limit?: number; offset?: number } = {}) {
   return prisma.action.findMany({
     where: { projectId },
     select: { id: true, title: true, dueDate: true, status: true, ownerName: true, owner: { select: { name: true } } },
-    orderBy: [{ dueDate: { sort: "asc", nulls: "last" } }, { title: "asc" }]
+    orderBy: [{ dueDate: { sort: "asc", nulls: "last" } }, { title: "asc" }, { id: "asc" }],
+    skip: options.offset,
+    take: options.limit
   });
 }
 

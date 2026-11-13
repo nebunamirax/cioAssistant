@@ -1,22 +1,25 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { entities, getFields, idField, keyField, meetingBatch, reviewFields, searchFields } from "../lib/business/contracts";
+import { entities, getFields, idField, keyField, meetingBatch, reviewFields, roadmapFields, searchFields } from "../lib/business/contracts";
+import { claudeOrigin } from "../lib/integrations/claude-origin";
+import manifest from "./manifest.json";
 
-const url = new URL(process.env.CIO_URL ?? "");
-if (url.protocol !== "https:" || url.username || url.password || url.pathname !== "/" || url.search || url.hash) {
-  throw new Error("CIO_URL doit être l’origine HTTPS de CIO Assistant.");
+const url = claudeOrigin(process.env.CIO_URL || manifest.user_config.cio_url.default);
+if (!url) {
+  throw new Error("Saisissez l’origine de CIO Assistant. Utilisez http://localhost:3000 sur le même poste ou l’URL HTTPS de l’instance partagée.");
 }
 const token = process.env.CIO_TOKEN;
 if (!token || !/^cio_[A-Za-z0-9_-]{43}$/.test(token)) throw new Error("Jeton CIO Assistant invalide.");
+const endpoint = new URL("/api/v1/business", url);
 
-const server = new McpServer({ name: "cio-assistant", version: "1.0.0" }, {
+const server = new McpServer({ name: manifest.name, version: manifest.version }, {
   instructions: "Utilisez les outils d’écriture lorsque l’utilisateur demande explicitement l’enregistrement. Pour un compte rendu et ses fiches liées, utilisez enregistrer_compte_rendu. Gardez la même clé pour rejouer un appel. En cas d’ambiguïté, demandez à l’utilisateur de choisir parmi les candidats avant d’écrire."
 });
 
 async function call(operation: string, input: object) {
   try {
-    const response = await fetch(new URL("/api/v1/business", url), {
+    const response = await fetch(endpoint, {
       method: "POST", redirect: "error", signal: AbortSignal.timeout(25000),
       headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
       body: JSON.stringify({ operation, input })
@@ -24,7 +27,10 @@ async function call(operation: string, input: object) {
     const result = await response.json();
     return { content: [{ type: "text" as const, text: JSON.stringify(result) }], isError: !response.ok };
   } catch {
-    return { content: [{ type: "text" as const, text: "CIO Assistant est inaccessible. Vérifiez le réseau privé, l’URL et la chaîne de confiance HTTPS." }], isError: true };
+    const detail = endpoint.protocol === "http:"
+      ? "Vérifiez que Docker est démarré et que l’application répond à cette adresse."
+      : "Vérifiez le réseau privé et le certificat HTTPS de l’instance.";
+    return { content: [{ type: "text" as const, text: JSON.stringify({ error: `CIO Assistant est inaccessible à ${endpoint.origin}. ${detail}` }) }], isError: true };
   }
 }
 
@@ -37,6 +43,11 @@ server.registerTool("consulter_fiche", {
   description: "Consulte une fiche CIO Assistant par identifiant.",
   inputSchema: getFields, annotations: { readOnlyHint: true, openWorldHint: false }
 }, (args) => call("get", args));
+
+server.registerTool("lire_roadmap", {
+  description: "Consulte les échéances, statuts, responsables et jalons du portefeuille. Fournissez projectId pour lire les actions d’un projet. Utilisez nextOffset pour la suite.",
+  inputSchema: roadmapFields, annotations: { readOnlyHint: true, openWorldHint: false }
+}, (args) => call("roadmap", args));
 
 const labels = {
   objective: "objectif", project: "projet", milestone: "jalon", action: "action", service: "service", control: "controle",
