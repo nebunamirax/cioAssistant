@@ -22,7 +22,6 @@ type WorkerState = {
 };
 
 declare global {
-  // eslint-disable-next-line no-var
   var __cioAssistantEmailWorker: WorkerState | undefined;
 }
 
@@ -118,6 +117,7 @@ export async function processAutomatedEmails(limit = 20) {
 
   const emails = await prisma.email.findMany({
     where: {
+      linkedActionId: null,
       automationStatus: {
         notIn: ["CREATED", "REVIEW"]
       }

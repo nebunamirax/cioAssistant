@@ -25,6 +25,7 @@ function buildProjectCreateData(input: ProjectInput): Prisma.ProjectUncheckedCre
     type: input.type,
     status: input.status,
     priority: input.priority,
+    objectiveId: normalizeOptionalString(input.objectiveId),
     ownerId: normalizeOptionalString(input.ownerId),
     startDate: toNullableDate(input.startDate),
     targetDate: toNullableDate(input.targetDate)
@@ -38,6 +39,7 @@ function buildProjectUpdateData(input: ProjectUpdateInput): Prisma.ProjectUnchec
     ...(input.type !== undefined ? { type: input.type } : {}),
     ...(input.status !== undefined ? { status: input.status } : {}),
     ...(input.priority !== undefined ? { priority: input.priority } : {}),
+    ...(input.objectiveId !== undefined ? { objectiveId: normalizeOptionalString(input.objectiveId) } : {}),
     ...(input.ownerId !== undefined ? { ownerId: normalizeOptionalString(input.ownerId) } : {}),
     ...(input.startDate !== undefined ? { startDate: toNullableDate(input.startDate) } : {}),
     ...(input.targetDate !== undefined ? { targetDate: toNullableDate(input.targetDate) } : {})
@@ -80,9 +82,9 @@ export async function listProjects(filters?: ProjectFilters) {
   });
 }
 
-export async function createProject(payload: ProjectInput) {
+export async function createProject(payload: ProjectInput, db: Prisma.TransactionClient = prisma) {
   const validated = projectSchema.parse(payload);
-  return prisma.project.create({
+  return db.project.create({
     data: buildProjectCreateData(validated)
   });
 }
@@ -91,6 +93,9 @@ export async function getProjectById(id: string) {
   return prisma.project.findUnique({
     where: { id },
     include: {
+      milestones: { orderBy: [{ dueDate: "asc" }, { title: "asc" }] },
+      objective: { select: { id: true, title: true } },
+      emails: { select: { id: true, subject: true }, orderBy: { receivedAt: "desc" }, take: 5 },
       actions: {
         orderBy: [{ dueDate: "asc" }, { createdAt: "desc" }],
         take: 10
@@ -124,9 +129,9 @@ export async function getProjectById(id: string) {
   });
 }
 
-export async function updateProject(id: string, payload: ProjectUpdateInput) {
+export async function updateProject(id: string, payload: ProjectUpdateInput, db: Prisma.TransactionClient = prisma) {
   const validated = projectUpdateSchema.parse(payload);
-  return prisma.project.update({
+  return db.project.update({
     where: { id },
     data: buildProjectUpdateData(validated)
   });

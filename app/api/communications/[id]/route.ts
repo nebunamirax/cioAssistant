@@ -6,12 +6,13 @@ import {
 } from "@/lib/services/communication-service";
 
 type RouteContext = {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 };
 
-export async function GET(_: Request, { params }: RouteContext) {
+export async function GET(_: Request, { params: paramsPromise }: RouteContext) {
+  const params = await paramsPromise;
   const data = await getCommunicationById(params.id);
 
   if (!data) {
@@ -21,7 +22,8 @@ export async function GET(_: Request, { params }: RouteContext) {
   return NextResponse.json({ data });
 }
 
-export async function PATCH(request: Request, { params }: RouteContext) {
+export async function PATCH(request: Request, { params: paramsPromise }: RouteContext) {
+  const params = await paramsPromise;
   try {
     const payload = await request.json();
     const data = await updateCommunication(params.id, payload);
@@ -31,7 +33,8 @@ export async function PATCH(request: Request, { params }: RouteContext) {
   }
 }
 
-export async function DELETE(_: Request, { params }: RouteContext) {
+export async function DELETE(_: Request, { params: paramsPromise }: RouteContext) {
+  const params = await paramsPromise;
   try {
     await deleteCommunication(params.id);
     return NextResponse.json({ ok: true });

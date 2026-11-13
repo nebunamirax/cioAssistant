@@ -69,9 +69,9 @@ export async function listVendors(filters?: VendorFilters) {
   });
 }
 
-export async function createVendor(payload: VendorInput) {
+export async function createVendor(payload: VendorInput, db: Prisma.TransactionClient = prisma) {
   const validated = vendorSchema.parse(payload);
-  return prisma.vendor.create({
+  return db.vendor.create({
     data: buildVendorCreateData(validated)
   });
 }
@@ -108,9 +108,9 @@ export async function getVendorById(id: string) {
   });
 }
 
-export async function updateVendor(id: string, payload: VendorUpdateInput) {
+export async function updateVendor(id: string, payload: VendorUpdateInput, db: Prisma.TransactionClient = prisma) {
   const validated = vendorUpdateSchema.parse(payload);
-  return prisma.vendor.update({
+  return db.vendor.update({
     where: { id },
     data: buildVendorUpdateData(validated)
   });

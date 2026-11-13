@@ -14,6 +14,17 @@ model User {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   projects  Project[]
+  role String @default("APPRENTI")
+  tenantId String?
+  objectId String?
+  enabled Boolean @default(false)
+  passwordHash String?
+  sessions Session[]
+  claudeTokens ClaudeToken[]
+  assignedActions Action[]
+  services SupportService[]
+
+  @@unique([tenantId, objectId])
 }
 
 model Project {
@@ -29,12 +40,21 @@ model Project {
   targetDate    DateTime?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
+  objectiveId   String?
+  objective     StrategicObjective? @relation(fields: [objectiveId], references: [id], onDelete: SetNull)
   actions       Action[]
   contracts     Contract[]
   budgetItems   BudgetItem[]
   communications Communication[]
   meetingNotes  MeetingNote[]
   emails       Email[]
+  risks        Risk[]
+  decisions    Decision[]
+
+  externalSources ExternalSource[]
+  milestones Milestone[]
+
+  @@index([objectiveId])
 }
 
 model Action {
@@ -42,6 +62,15 @@ model Action {
   title         String
   description   String?
   ownerName     String?
+  ownerId String?
+  owner User? @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  serviceId String?
+  service SupportService? @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+  externalItemId String? @unique
+  externalItem ExternalItem? @relation(fields: [externalItemId], references: [id], onDelete: SetNull)
+  meetingNoteId String?
+  meetingNote MeetingNote? @relation(fields: [meetingNoteId], references: [id], onDelete: SetNull)
+  sourceUrl String?
   status        String       @default("TODO")
   priority      String       @default("NORMAL")
   dueDate       DateTime?
@@ -73,6 +102,7 @@ model Vendor {
   supportServices  SupportService[]
   budgetItems      BudgetItem[]
   actions          Action[]
+  risks            Risk[]
 }
 
 model Contract {
@@ -96,6 +126,7 @@ model Contract {
   budgetItems      BudgetItem[]
   actions          Action[]
   communications   Communication[]
+  decisions        Decision[]
 }
 
 model SupportService {
@@ -103,6 +134,13 @@ model SupportService {
   vendorId   String?
   contractId String?
   title      String
+  ownerId String?
+  owner User? @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  escalationContact String?
+  procedure String?
+  controls ServiceControl[]
+  externalSources ExternalSource[]
+  actions Action[]
   scope      String?
   criticality String?
   notes      String?
@@ -129,6 +167,7 @@ model BudgetItem {
   project               Project?  @relation(fields: [projectId], references: [id])
   contract              Contract? @relation(fields: [contractId], references: [id])
   vendor                Vendor?   @relation(fields: [vendorId], references: [id])
+  decisions             Decision[]
 }
 
 model Communication {
@@ -155,6 +194,9 @@ model MeetingNote {
   projectId             String?
   title                 String
   meetingDate           DateTime
+  actions Action[]
+  risks Risk[]
+  decisions Decision[]
   attendeesJson         String?
   rawContent            String
   summary               String?
@@ -225,6 +267,48 @@ model AIIntakeReview {
   updatedAt          DateTime @updatedAt
 }
 
+model Risk {
+  meetingNoteId String?
+  meetingNote MeetingNote? @relation(fields: [meetingNoteId], references: [id], onDelete: SetNull)
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  impact      String   @default("MEDIUM")
+  probability String   @default("MEDIUM")
+  criticality String   @default("MEDIUM")
+  status      String   @default("OPEN")
+  mitigation  String?
+  projectId   String?
+  vendorId    String?
+  ownerName   String?
+  dueDate     DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  project     Project? @relation(fields: [projectId], references: [id])
+  vendor      Vendor?  @relation(fields: [vendorId], references: [id])
+}
+
+model Decision {
+  meetingNoteId String?
+  meetingNote MeetingNote? @relation(fields: [meetingNoteId], references: [id], onDelete: SetNull)
+  id             String      @id @default(cuid())
+  subject        String
+  context        String?
+  optionsJson    String?
+  recommendation String?
+  decider        String?
+  status         String      @default("PENDING")
+  targetDate     DateTime?
+  projectId      String?
+  contractId     String?
+  budgetItemId   String?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  project        Project?    @relation(fields: [projectId], references: [id])
+  contract       Contract?   @relation(fields: [contractId], references: [id])
+  budgetItem     BudgetItem? @relation(fields: [budgetItemId], references: [id])
+}
+
 model Note {
   id         String   @id @default(cuid())
   title      String
@@ -233,4 +317,125 @@ model Note {
   entityId   String
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+}
+
+model StrategicObjective {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  ownerName   String?
+  targetDate  DateTime?
+  createdAt   DateTime  @default(now())
+  projects    Project[]
+}
+
+model ExternalSource {
+  id           String         @id @default(cuid())
+  kind         String
+  key          String
+  title        String
+  projectId    String?
+  serviceId String?
+  service SupportService? @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  lastSyncedAt DateTime?
+  statusMappings String?
+  project      Project?       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  items        ExternalItem[]
+
+  @@unique([kind, key])
+  @@index([projectId])
+}
+
+model ExternalItem {
+  id               String         @id @default(cuid())
+  sourceId         String
+  externalId       String
+  title            String
+  status           String
+  originalStatus   String?
+  assignees        String         @default("")
+  priority         String?
+  dueDate          DateTime?
+  major Boolean @default(false)
+  followUp Action?
+  progress         Int?
+  url              String?
+  lastSyncedAt     DateTime
+  source           ExternalSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceId, externalId])
+  @@index([status, dueDate])
+}
+
+model Session {
+  hash String @id
+  userId String
+  expiresAt DateTime
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId])
+}
+
+model LoginAttempt {
+  id String @id
+  failures Int
+  expiresAt DateTime
+}
+
+model ClaudeToken {
+  id String @id @default(cuid())
+  hash String @unique
+  label String
+  userId String
+  createdAt DateTime @default(now())
+  revokedAt DateTime?
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ClaudeWrite {
+  userId String
+  key String
+  fingerprint String
+  response String
+  createdAt DateTime @default(now())
+  @@id([userId, key])
+}
+
+model ServiceControl {
+  id String @id @default(cuid())
+  serviceId String
+  service SupportService @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  authorId String
+  authorName String
+  checkedAt DateTime
+  result String
+  evidence String
+  nextDueAt DateTime
+  createdAt DateTime @default(now())
+  @@index([serviceId, checkedAt])
+}
+
+model Milestone {
+  id String @id @default(cuid())
+  projectId String
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title String
+  dueDate DateTime?
+  status String @default("TODO")
+}
+
+model MonthlyReport {
+  month String @id
+  comment String @default("")
+  draft String
+  archive String?
+  archivedAt DateTime?
+}
+
+model PmoImport {
+  id         String   @id @default(cuid())
+  authorId   String
+  sourceName String
+  plan       String
+  result     String?
+  createdAt  DateTime @default(now())
 }

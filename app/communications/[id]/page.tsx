@@ -7,7 +7,8 @@ import { prisma } from "@/lib/db/prisma";
 import { getCommunicationById } from "@/lib/services/communication-service";
 import { notFound } from "next/navigation";
 
-export default async function CommunicationDetailPage({ params }: { params: { id: string } }) {
+export default async function CommunicationDetailPage({ params: paramsPromise }: { params: Promise<{ id: string }> }) {
+  const params = await paramsPromise;
   const [communication, projects, actions, contracts] = await Promise.all([
     getCommunicationById(params.id),
     prisma.project.findMany({ orderBy: { title: "asc" }, select: { id: true, title: true } }),

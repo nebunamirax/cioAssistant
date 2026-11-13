@@ -8,13 +8,14 @@ import { getContractById, listContracts } from "@/lib/services/contract-service"
 import type { ContractFilters as ContractFiltersInput } from "@/lib/validation/contract";
 
 type ContractsPageProps = {
-  searchParams?: {
+  searchParams?: Promise<{
     search?: string;
     status?: string;
     renewalType?: string;
     expiringOnly?: string;
     selectedId?: string;
-  };
+    new?: string;
+  }>;
 };
 
 type ContractStatusValue = NonNullable<ContractFiltersInput["status"]>;
@@ -28,7 +29,8 @@ function isRenewalType(value: string): value is RenewalTypeValue {
   return RENEWAL_TYPES.includes(value as (typeof RENEWAL_TYPES)[number]);
 }
 
-export default async function ContractsPage({ searchParams }: ContractsPageProps) {
+export default async function ContractsPage({ searchParams: searchParamsPromise }: ContractsPageProps) {
+  const searchParams = await searchParamsPromise;
   const status: ContractFiltersInput["status"] = searchParams?.status && isContractStatus(searchParams.status)
     ? searchParams.status
     : undefined;
@@ -58,11 +60,15 @@ export default async function ContractsPage({ searchParams }: ContractsPageProps
   if (renewalType) baseParams.set("renewalType", renewalType);
   if (searchParams?.expiringOnly === "true") baseParams.set("expiringOnly", "true");
 
-  const buildSelectionHref = (selectedId?: string) => {
+  const panelOpen = Boolean(selectedContract || searchParams?.new === "1");
+
+  const buildSelectionHref = (selectedId?: string, create = false) => {
     const params = new URLSearchParams(baseParams);
 
     if (selectedId) {
       params.set("selectedId", selectedId);
+    } else if (create) {
+      params.set("new", "1");
     }
 
     const query = params.toString();
@@ -74,30 +80,23 @@ export default async function ContractsPage({ searchParams }: ContractsPageProps
       <div className="workbench-header">
         <div className="space-y-2">
           <h1 className="text-2xl font-semibold">Contrats</h1>
-          <p className="text-sm text-slate-600">Garde les échéances, rattachements et modifications contractuelles dans le même poste de travail.</p>
           <div className="workbench-kpi-grid">
             <div className="workbench-kpi">
               <div className="workbench-kpi-label">Contrats</div>
               <div className="workbench-kpi-value">{contracts.length}</div>
             </div>
-            <div className="workbench-kpi">
-              <div className="workbench-kpi-label">Sélection</div>
-              <div className="workbench-kpi-value">{selectedContract ? "1" : "0"}</div>
-            </div>
-            <div className="workbench-kpi">
-              <div className="workbench-kpi-label">Échéance</div>
-              <div className="workbench-kpi-value">{selectedContract?.endDate ? new Intl.DateTimeFormat("fr-FR").format(selectedContract.endDate) : "—"}</div>
-            </div>
           </div>
         </div>
-        {selectedContract && (
+        {panelOpen ? (
           <Link href={buildSelectionHref()} className="button-secondary">
-            Fermer le panneau
+            Fermer
           </Link>
+        ) : (
+          <Link href={buildSelectionHref(undefined, true)} className="button-primary">Nouveau contrat</Link>
         )}
       </div>
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.7fr),460px]">
-        <section className="space-y-4">
+      <div className={panelOpen ? "workspace-split" : "space-y-4"}>
+        <section className="min-w-0 space-y-4">
           <ContractFilters values={filters} />
           <div className="workbench-table-shell">
             <table className="workbench-table">
@@ -144,20 +143,17 @@ export default async function ContractsPage({ searchParams }: ContractsPageProps
           </div>
         </section>
 
-        <aside className="space-y-4 xl:sticky xl:top-4 xl:self-start">
+        {panelOpen && <aside className="order-first min-w-0 space-y-4 xl:order-none">
           <section className="workbench-panel">
             <div className="mb-4 flex items-start justify-between gap-3">
               <div>
                 <h2 className="panel-title">
                   {selectedContract ? "Éditer le contrat" : "Nouveau contrat"}
                 </h2>
-                <p className="panel-caption">
-                  {selectedContract ? "Les champs ci-dessous sont déjà renseignés avec les données du contrat." : "Crée un contrat ou sélectionne une ligne pour le modifier."}
-                </p>
               </div>
               {selectedContract && <ContractDeleteButton contractId={selectedContract.id} />}
             </div>
-            <ContractForm
+            <ContractForm key={selectedContract?.id ?? "new"}
               mode={selectedContract ? "edit" : "create"}
               contractId={selectedContract?.id}
               vendorOptions={vendorOptions}
@@ -190,7 +186,7 @@ export default async function ContractsPage({ searchParams }: ContractsPageProps
               <p><strong>Services:</strong> {selectedContract._count.supportServices}</p>
             </section>
           )}
-        </aside>
+        </aside>}
       </div>
     </div>
   );

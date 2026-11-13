@@ -8,3 +8,12 @@ coverage
 dist
 .DS_Store
 *.db
+
+.env
+.env.*
+!.env.example
+.data
+.models
+*.db-journal
+*.db-wal
+*.db-shm

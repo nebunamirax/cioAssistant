@@ -1,38 +1,43 @@
+x-cio-build: &cio-build
+  context: .
+  platforms: [linux/amd64]
+
 services:
   app:
     platform: linux/amd64
-    build:
-      context: .
-      dockerfile: Dockerfile
+    build: *cio-build
     ports:
-      - "3000:3000"
+      - "127.0.0.1:${CIO_HTTP_PORT:-3000}:3000"
+    volumes:
+      - app-data:/app/.data
+      - ./.models:/app/.models:ro
     environment:
-      DATABASE_URL: "file:./prisma/dev.db"
-      AI_PROVIDER_MODE: "compatible"
-      AI_COMPATIBLE_BASE_URL: "http://host.docker.internal:1234/v1"
-      AI_COMPATIBLE_MODEL: "mistralai/devstral-small-2507"
-    command: sh -lc "npx prisma db push && npm run dev"
+      DATABASE_URL: file:/app/.data/cioassistant.db
+      CIO_PUBLIC_URL: ${CIO_PUBLIC_URL:-http://localhost:3000}
+      ENTRA_TENANT_ID: ${ENTRA_TENANT_ID:-}
+      ENTRA_CLIENT_ID: ${ENTRA_CLIENT_ID:-}
+      ENTRA_CLIENT_SECRET: ${ENTRA_CLIENT_SECRET:-}
+      AI_PROVIDER_MODE: ${AI_PROVIDER_MODE:-compatible}
+      AI_COMPATIBLE_BASE_URL: ${AI_COMPATIBLE_BASE_URL:-http://host.docker.internal:1234/v1}
+      AI_AUDIO_TRANSCRIPTION_EMBEDDED_MODEL: ${AI_AUDIO_TRANSCRIPTION_EMBEDDED_MODEL:-}
+      AI_AUDIO_TRANSCRIPTION_BACKEND: ${AI_AUDIO_TRANSCRIPTION_BACKEND:-}
+      AI_COMPATIBLE_MODEL: ${AI_COMPATIBLE_MODEL:-mistralai/devstral-small-2507}
 
   verify:
+    profiles: [tools]
     platform: linux/amd64
-    build:
-      context: .
-      dockerfile: Dockerfile
+    build: *cio-build
     environment:
-      DATABASE_URL: "file:./prisma/dev.db"
-      AI_PROVIDER_MODE: "compatible"
-      AI_COMPATIBLE_BASE_URL: "http://host.docker.internal:1234/v1"
-      AI_COMPATIBLE_MODEL: "mistralai/devstral-small-2507"
-    command: sh -lc "npm run test:run && npx prisma db push && npm run lint && npm run build"
+      DATABASE_URL: file:/tmp/cio-verify.db
+    command: sh -ec "./node_modules/.bin/prisma migrate deploy && npm run test:run && npm run lint && node scripts/check-whisper.cjs && ./node_modules/.bin/tsx scripts/verify-shared.ts"
 
   test:
+    profiles: [tools]
     platform: linux/amd64
-    build:
-      context: .
-      dockerfile: Dockerfile
+    build: *cio-build
     environment:
-      DATABASE_URL: "file:./prisma/dev.db"
-      AI_PROVIDER_MODE: "compatible"
-      AI_COMPATIBLE_BASE_URL: "http://host.docker.internal:1234/v1"
-      AI_COMPATIBLE_MODEL: "mistralai/devstral-small-2507"
+      DATABASE_URL: file:/tmp/cio-test.db
     command: npm run test:run
+
+volumes:
+  app-data:

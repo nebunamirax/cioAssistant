@@ -6,7 +6,8 @@ const prismaMock = {
     delete: vi.fn(),
     findMany: vi.fn(),
     findUnique: vi.fn(),
-    update: vi.fn()
+    update: vi.fn(),
+    updateMany: vi.fn()
   }
 };
 
@@ -21,6 +22,7 @@ describe("action-service", () => {
     prismaMock.action.findMany.mockReset();
     prismaMock.action.findUnique.mockReset();
     prismaMock.action.update.mockReset();
+    prismaMock.action.updateMany.mockReset();
   });
 
   it("liste les actions avec les relations attendues", async () => {
@@ -31,7 +33,7 @@ describe("action-service", () => {
 
     expect(prismaMock.action.findMany).toHaveBeenCalledWith({
       where: {},
-      include: { project: true, contract: true, vendor: true },
+      include: { project: true, contract: true, vendor: true, owner: { select: { name: true } } },
       orderBy: [{ dueDate: "asc" }, { createdAt: "desc" }]
     });
     expect(result).toEqual([{ id: "a1" }]);
@@ -104,10 +106,12 @@ describe("action-service", () => {
       description: ""
     });
 
+    expect(prismaMock.action.updateMany).toHaveBeenCalledWith({
+      where: { id: "a1", completedAt: null }, data: { completedAt: expect.any(Date) }
+    });
     expect(prismaMock.action.update).toHaveBeenCalledWith({
       where: { id: "a1" },
       data: {
-        completedAt: expect.any(Date),
         description: null,
         ownerName: undefined,
         status: "DONE"

@@ -35,11 +35,11 @@ async function buildTemplateContext(input: {
   projectId?: string | null;
   actionId?: string | null;
   contractId?: string | null;
-}) {
+}, db: Prisma.TransactionClient) {
   const [project, action, contract] = await Promise.all([
-    input.projectId ? prisma.project.findUnique({ where: { id: input.projectId }, select: { title: true } }) : null,
-    input.actionId ? prisma.action.findUnique({ where: { id: input.actionId }, select: { title: true } }) : null,
-    input.contractId ? prisma.contract.findUnique({ where: { id: input.contractId }, select: { title: true } }) : null
+    input.projectId ? db.project.findUnique({ where: { id: input.projectId }, select: { title: true } }) : null,
+    input.actionId ? db.action.findUnique({ where: { id: input.actionId }, select: { title: true } }) : null,
+    input.contractId ? db.contract.findUnique({ where: { id: input.contractId }, select: { title: true } }) : null
   ]);
 
   return {
@@ -49,7 +49,7 @@ async function buildTemplateContext(input: {
   };
 }
 
-async function enrichGeneratedContent(input: CommunicationInput | CommunicationUpdateInput) {
+async function enrichGeneratedContent(input: CommunicationInput | CommunicationUpdateInput, db: Prisma.TransactionClient) {
   const templateKey = input.templateKey ?? undefined;
   const templateInputData = sanitizeTemplateInputData(input.templateInputData);
 
@@ -68,7 +68,7 @@ async function enrichGeneratedContent(input: CommunicationInput | CommunicationU
     projectId: input.projectId ?? null,
     actionId: input.actionId ?? null,
     contractId: input.contractId ?? null
-  });
+  }, db);
   const generated = renderCommunicationTemplate(templateKey as CommunicationTemplateKey, templateInputData, context);
 
   return {
@@ -81,8 +81,8 @@ async function enrichGeneratedContent(input: CommunicationInput | CommunicationU
   };
 }
 
-async function buildCommunicationCreateDataAsync(input: CommunicationInput): Promise<Prisma.CommunicationUncheckedCreateInput> {
-  const generated = await enrichGeneratedContent(input);
+async function buildCommunicationCreateDataAsync(input: CommunicationInput, db: Prisma.TransactionClient): Promise<Prisma.CommunicationUncheckedCreateInput> {
+  const generated = await enrichGeneratedContent(input, db);
 
   return {
     title: generated.title ?? input.title ?? "",
@@ -98,8 +98,8 @@ async function buildCommunicationCreateDataAsync(input: CommunicationInput): Pro
   };
 }
 
-async function buildCommunicationUpdateDataAsync(input: CommunicationUpdateInput): Promise<Prisma.CommunicationUncheckedUpdateInput> {
-  const generated = await enrichGeneratedContent(input);
+async function buildCommunicationUpdateDataAsync(input: CommunicationUpdateInput, db: Prisma.TransactionClient): Promise<Prisma.CommunicationUncheckedUpdateInput> {
+  const generated = await enrichGeneratedContent(input, db);
 
   return {
     ...(input.title !== undefined || generated.templateKey !== undefined ? { title: generated.title ?? input.title ?? "" } : {}),
@@ -166,10 +166,10 @@ export async function listCommunications(filters?: CommunicationFilters) {
   return records.map(mapCommunicationRecord);
 }
 
-export async function createCommunication(payload: CommunicationInput) {
+export async function createCommunication(payload: CommunicationInput, db: Prisma.TransactionClient = prisma) {
   const validated = communicationSchema.parse(payload);
-  const record = await prisma.communication.create({
-    data: await buildCommunicationCreateDataAsync(validated)
+  const record = await db.communication.create({
+    data: await buildCommunicationCreateDataAsync(validated, db)
   });
 
   return mapCommunicationRecord(record);
@@ -188,11 +188,11 @@ export async function getCommunicationById(id: string) {
   return record ? mapCommunicationRecord(record) : null;
 }
 
-export async function updateCommunication(id: string, payload: CommunicationUpdateInput) {
+export async function updateCommunication(id: string, payload: CommunicationUpdateInput, db: Prisma.TransactionClient = prisma) {
   const validated = communicationUpdateSchema.parse(payload);
-  const record = await prisma.communication.update({
+  const record = await db.communication.update({
     where: { id },
-    data: await buildCommunicationUpdateDataAsync(validated)
+    data: await buildCommunicationUpdateDataAsync(validated, db)
   });
 
   return mapCommunicationRecord(record);

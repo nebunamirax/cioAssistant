@@ -1,3 +1,4 @@
+import Link from "next/link";
 type VendorFiltersProps = {
   values: {
     search?: string;
@@ -25,9 +26,9 @@ export function VendorFilters({ values }: VendorFiltersProps) {
         <button type="submit" className="button-primary">
           Filtrer
         </button>
-        <a href="/vendors" className="button-secondary">
+        <Link href="/vendors" className="button-secondary">
           Réinitialiser
-        </a>
+        </Link>
       </div>
     </form>
   );

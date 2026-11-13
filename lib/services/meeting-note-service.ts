@@ -148,9 +148,9 @@ export async function listMeetingNotes(filters?: MeetingNoteFilters) {
   return meetingNotes.map(hydrateMeetingNote);
 }
 
-export async function createMeetingNote(payload: MeetingNoteInput) {
+export async function createMeetingNote(payload: MeetingNoteInput, db: Prisma.TransactionClient = prisma) {
   const validated = meetingNoteSchema.parse(payload);
-  const meetingNote = await prisma.meetingNote.create({
+  const meetingNote = await db.meetingNote.create({
     data: buildMeetingNoteCreateData(validated)
   });
 
@@ -168,9 +168,9 @@ export async function getMeetingNoteById(id: string) {
   return meetingNote ? hydrateMeetingNote(meetingNote) : null;
 }
 
-export async function updateMeetingNote(id: string, payload: MeetingNoteUpdateInput) {
+export async function updateMeetingNote(id: string, payload: MeetingNoteUpdateInput, db: Prisma.TransactionClient = prisma) {
   const validated = meetingNoteUpdateSchema.parse(payload);
-  const meetingNote = await prisma.meetingNote.update({
+  const meetingNote = await db.meetingNote.update({
     where: { id },
     data: buildMeetingNoteUpdateData(validated),
     include: {

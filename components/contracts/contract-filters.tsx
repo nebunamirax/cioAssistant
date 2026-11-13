@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { CONTRACT_STATUSES, RENEWAL_TYPES } from "@/lib/domain/constants";
 
 type ContractFiltersProps = {
@@ -39,9 +40,9 @@ export function ContractFilters({ values }: ContractFiltersProps) {
         <button type="submit" className="button-primary">
           Filtrer
         </button>
-        <a href="/contracts" className="button-secondary">
+        <Link href="/contracts" className="button-secondary">
           Réinitialiser
-        </a>
+        </Link>
       </div>
     </form>
   );

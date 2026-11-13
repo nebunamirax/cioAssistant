@@ -4,12 +4,13 @@ import { aiIntakeReviewSuggestSchema } from "@/lib/validation/ai-intake-review";
 import { resolveAIIntakeReview, suggestAIIntakeReviewDraft, updateAIIntakeReview } from "@/lib/services/ai-intake-review-service";
 
 type RouteContext = {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 };
 
-export async function PATCH(request: Request, { params }: RouteContext) {
+export async function PATCH(request: Request, { params: paramsPromise }: RouteContext) {
+  const params = await paramsPromise;
   try {
     const payload = await request.json();
     const data = await updateAIIntakeReview(params.id, payload);
@@ -19,7 +20,8 @@ export async function PATCH(request: Request, { params }: RouteContext) {
   }
 }
 
-export async function POST(request: Request, { params }: RouteContext) {
+export async function POST(request: Request, { params: paramsPromise }: RouteContext) {
+  const params = await paramsPromise;
   try {
     const payload = await request.json();
     const suggest = aiIntakeReviewSuggestSchema.safeParse(payload);

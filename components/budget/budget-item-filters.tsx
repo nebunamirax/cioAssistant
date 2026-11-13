@@ -1,3 +1,4 @@
+import Link from "next/link";
 type BudgetItemFiltersProps = {
   values: {
     search?: string;
@@ -32,9 +33,9 @@ export function BudgetItemFilters({ values }: BudgetItemFiltersProps) {
         <button type="submit" className="button-primary">
           Filtrer
         </button>
-        <a href="/budget" className="button-secondary">
+        <Link href="/budget" className="button-secondary">
           Réinitialiser
-        </a>
+        </Link>
       </div>
     </form>
   );

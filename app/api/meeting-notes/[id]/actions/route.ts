@@ -2,12 +2,13 @@ import { NextResponse } from "next/server";
 import { createActionsFromMeetingNote } from "@/lib/services/meeting-note-service";
 
 type RouteContext = {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 };
 
-export async function POST(_: Request, { params }: RouteContext) {
+export async function POST(_: Request, { params: paramsPromise }: RouteContext) {
+  const params = await paramsPromise;
   try {
     const data = await createActionsFromMeetingNote(params.id);
     return NextResponse.json({ data });

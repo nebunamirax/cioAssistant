@@ -8,6 +8,9 @@ export const COMMUNICATION_STATUSES = ["DRAFT", "READY", "SENT", "ARCHIVED"] as 
 export const AI_PROVIDER_MODES = ["LOCAL", "EXTERNAL"] as const;
 export const AI_JOB_STATUSES = ["PENDING", "RUNNING", "DONE", "FAILED"] as const;
 export const EMAIL_AUTOMATION_STATUSES = ["PENDING", "PROCESSING", "CREATED", "REVIEW", "FAILED", "IGNORED"] as const;
+export const RISK_LEVELS = ["LOW", "MEDIUM", "HIGH", "CRITICAL"] as const;
+export const RISK_STATUSES = ["OPEN", "MITIGATING", "ACCEPTED", "CLOSED"] as const;
+export const DECISION_STATUSES = ["PENDING", "APPROVED", "REJECTED", "DEFERRED"] as const;
 
 export type Priority = (typeof PRIORITIES)[number];
 export type ActionStatus = (typeof ACTION_STATUSES)[number];
@@ -19,3 +22,6 @@ export type CommunicationStatus = (typeof COMMUNICATION_STATUSES)[number];
 export type AIProviderMode = (typeof AI_PROVIDER_MODES)[number];
 export type AIJobStatus = (typeof AI_JOB_STATUSES)[number];
 export type EmailAutomationStatus = (typeof EMAIL_AUTOMATION_STATUSES)[number];
+export type RiskLevel = (typeof RISK_LEVELS)[number];
+export type RiskStatus = (typeof RISK_STATUSES)[number];
+export type DecisionStatus = (typeof DECISION_STATUSES)[number];

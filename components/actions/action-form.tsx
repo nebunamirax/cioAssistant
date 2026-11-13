@@ -1,5 +1,6 @@
 "use client";
 
+import { actionLabels, priorityLabels } from "@/lib/domain/display-labels";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ACTION_STATUSES, PRIORITIES } from "@/lib/domain/constants";
@@ -7,6 +8,7 @@ import { ACTION_STATUSES, PRIORITIES } from "@/lib/domain/constants";
 type ActionFormValues = {
   title: string;
   description?: string | null;
+  ownerId?: string | null;
   ownerName?: string | null;
   status: (typeof ACTION_STATUSES)[number];
   priority: (typeof PRIORITIES)[number];
@@ -24,14 +26,19 @@ type ActionFormProps = {
   actionId?: string;
   initialValues?: Partial<ActionFormValues>;
   showHeader?: boolean;
+  apprentice?: boolean;
+  members?: { id: string; name: string; email: string }[];
+  projectOptions?: ProjectOption[];
 };
 
-export function ActionForm({ mode = "create", actionId, initialValues, showHeader = true }: ActionFormProps) {
+export function ActionForm({ mode = "create", actionId, initialValues, showHeader = true, apprentice = false, members, projectOptions }: ActionFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [title, setTitle] = useState(initialValues?.title ?? "");
   const [description, setDescription] = useState(initialValues?.description ?? "");
+  const [ownerId, setOwnerId] = useState(initialValues?.ownerId ?? "");
   const [ownerName, setOwnerName] = useState(initialValues?.ownerName ?? "");
   const [dueDate, setDueDate] = useState(initialValues?.dueDate ?? "");
   const [status, setStatus] = useState<(typeof ACTION_STATUSES)[number]>(initialValues?.status ?? "TODO");
@@ -42,6 +49,7 @@ export function ActionForm({ mode = "create", actionId, initialValues, showHeade
   useEffect(() => {
     setTitle(initialValues?.title ?? "");
     setDescription(initialValues?.description ?? "");
+    setOwnerId(initialValues?.ownerId ?? "");
     setOwnerName(initialValues?.ownerName ?? "");
     setDueDate(initialValues?.dueDate ?? "");
     setStatus(initialValues?.status ?? "TODO");
@@ -50,21 +58,23 @@ export function ActionForm({ mode = "create", actionId, initialValues, showHeade
   }, [actionId, initialValues, mode]);
 
   useEffect(() => {
+    if (projectOptions) return;
     let cancelled = false;
 
     const loadProjects = async () => {
-      const response = await fetch("/api/projects");
-      const payload = await response.json();
+      try {
+        const response = await fetch("/api/projects");
+        const payload = await response.json();
+        if (!response.ok || cancelled) return;
 
-      if (!response.ok || cancelled) {
-        return;
+        setProjects(
+          Array.isArray(payload.data)
+            ? payload.data.map((project: { id: string; title: string }) => ({ id: project.id, title: project.title }))
+            : []
+        );
+      } catch {
+        if (!cancelled) setError("Impossible de charger les projets.");
       }
-
-      setProjects(
-        Array.isArray(payload.data)
-          ? payload.data.map((project: { id: string; title: string }) => ({ id: project.id, title: project.title }))
-          : []
-      );
     };
 
     void loadProjects();
@@ -72,59 +82,65 @@ export function ActionForm({ mode = "create", actionId, initialValues, showHeade
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [projectOptions]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setNotice(null);
 
-    const response = await fetch(actionId ? `/api/actions/${actionId}` : "/api/actions", {
-      method: actionId ? "PATCH" : "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title,
-        description,
-        ownerName,
-        status,
-        priority,
-        dueDate: dueDate ? new Date(dueDate).toISOString() : null,
-        projectId: projectId || null
-      })
-    });
-    const payload = await response.json();
+    try {
+      const response = await fetch(actionId ? `/api/actions/${actionId}` : "/api/actions", {
+        method: actionId ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(apprentice && actionId ? { status } : {
+          title,
+          description,
+          ...(members ? { ownerId: ownerId || null } : { ownerName }),
+          status,
+          priority,
+          dueDate: dueDate ? new Date(dueDate).toISOString() : null,
+          projectId: projectId || null
+        })
+      });
+      const payload = await response.json();
 
-    if (!response.ok) {
-      setError(payload.error ?? "Une erreur est survenue.");
+      if (!response.ok) {
+        setError(payload.error ?? "Une erreur est survenue.");
+        return;
+      }
+
+      if (mode === "create") {
+        setTitle("");
+        setDescription("");
+        setOwnerName("");
+        setOwnerId("");
+        setDueDate("");
+        setStatus("TODO");
+        setPriority("NORMAL");
+        setProjectId(initialValues?.projectId ?? "");
+      }
+
+      setNotice(mode === "create" ? "Action créée." : "Modifications enregistrées.");
+      router.refresh();
+    } catch {
+      setError("Impossible de joindre le serveur. Réessayez.");
+    } finally {
       setLoading(false);
-      return;
     }
-
-    if (mode === "create") {
-      setTitle("");
-      setDescription("");
-      setOwnerName("");
-      setDueDate("");
-      setStatus("TODO");
-      setPriority("NORMAL");
-      setProjectId("");
-    }
-
-    setLoading(false);
-    router.refresh();
   };
 
   return (
     <form onSubmit={submit} className="form-stack">
       {showHeader && <h2 className="panel-title">{mode === "create" ? "Nouvelle action" : "Modifier l'action"}</h2>}
-      <section className="form-section space-y-3">
+      {!(apprentice && actionId) && <section className="form-section space-y-3">
         <div>
-          <h3 className="form-section-title">Essentiel</h3>
-          <p className="form-section-caption">Décris clairement l’action à exécuter. Commence par le résultat attendu.</p>
+          <h3 className="form-section-title">Action</h3>
         </div>
         <div>
-          <label className="field-label">Titre</label>
-          <input
+          <label className="field-label" htmlFor="action-title">Titre</label>
+          <input id="action-title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Ex: Valider le budget infra 2026"
@@ -133,76 +149,69 @@ export function ActionForm({ mode = "create", actionId, initialValues, showHeade
           />
         </div>
         <div>
-          <label className="field-label">Description</label>
-          <textarea
+          <label className="field-label" htmlFor="action-description">Description</label>
+          <textarea id="action-description"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Contexte, livrable attendu, point de vigilance..."
             rows={4}
             className="field-textarea"
           />
-          <p className="field-hint">Optionnel, mais utile pour transmettre l’intention sans devoir ouvrir une fiche détail.</p>
         </div>
-        <div>
-          <label className="field-label">Responsable</label>
-          <input
-            value={ownerName}
-            onChange={(e) => setOwnerName(e.target.value)}
-            placeholder="Ex: Max Martin"
-            className="field-input"
-          />
-          <p className="field-hint">Nom du porteur de l’action si l’attribution est connue.</p>
-        </div>
-      </section>
+        {!apprentice && <label>
+          <span className="field-label">Responsable</span>
+          {members ? <select className="field-select" value={ownerId} onChange={(event) => setOwnerId(event.target.value)}>
+            <option value="">{ownerName || "Sans affectation"}</option>
+            {members.map((member) => <option key={member.id} value={member.id}>{member.name} · {member.email}</option>)}
+          </select> : <input className="field-input" value={ownerName} onChange={(event) => setOwnerName(event.target.value)} />}
+        </label>}
+      </section>}
       <section className="form-section space-y-3">
         <div>
           <h3 className="form-section-title">Pilotage</h3>
-          <p className="form-section-caption">Positionne l’action dans le flux de travail et fixe son niveau d’attention.</p>
         </div>
         <div className="grid gap-3 md:grid-cols-2">
           <div>
-            <label className="field-label">Statut</label>
-            <select value={status} onChange={(e) => setStatus(e.target.value as (typeof ACTION_STATUSES)[number])} className="field-select">
+            <label className="field-label" htmlFor="action-status">Statut</label>
+            <select id="action-status" value={status} onChange={(e) => setStatus(e.target.value as (typeof ACTION_STATUSES)[number])} className="field-select">
               {ACTION_STATUSES.map((s) => (
-                <option key={s} value={s}>{s}</option>
+                <option key={s} value={s}>{actionLabels[s]}</option>
               ))}
             </select>
           </div>
-          <div>
-            <label className="field-label">Priorité</label>
-            <select value={priority} onChange={(e) => setPriority(e.target.value as (typeof PRIORITIES)[number])} className="field-select">
+          <div hidden={Boolean(apprentice && actionId)}>
+            <label className="field-label" htmlFor="action-priority">Priorité</label>
+            <select id="action-priority" value={priority} onChange={(e) => setPriority(e.target.value as (typeof PRIORITIES)[number])} className="field-select">
               {PRIORITIES.map((p) => (
-                <option key={p} value={p}>{p}</option>
+                <option key={p} value={p}>{priorityLabels[p]}</option>
               ))}
             </select>
           </div>
         </div>
-        <div>
-          <label className="field-label">Projet</label>
-          <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className="field-select">
+        <div hidden={Boolean(apprentice && actionId)}>
+          <label className="field-label" htmlFor="action-project">Projet</label>
+          <select id="action-project" value={projectId} onChange={(e) => setProjectId(e.target.value)} className="field-select">
             <option value="">Aucun projet</option>
-            {projects.map((project) => (
+            {(projectOptions ?? projects).map((project) => (
               <option key={project.id} value={project.id}>
                 {project.title}
               </option>
             ))}
           </select>
-          <p className="field-hint">Permet de rattacher l’action au bon projet pour le suivi croisé.</p>
         </div>
-        <div>
-          <label className="field-label">Échéance</label>
-          <input
+        <div hidden={Boolean(apprentice && actionId)}>
+          <label className="field-label" htmlFor="action-due">Échéance</label>
+          <input id="action-due"
             type="datetime-local"
             value={dueDate}
             onChange={(e) => setDueDate(e.target.value)}
             className="field-input"
           />
-          <p className="field-hint">Laisse vide si l’action reste ouverte sans date cible.</p>
         </div>
       </section>
-      {error && <p className="text-sm text-red-600">{error}</p>}
-      <div className="form-actions">
-        <p className="form-actions-note">Les changements sont enregistrés sur l’action sélectionnée.</p>
+      {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
+      {notice && <p role="status" className="text-sm text-emerald-800">{notice}</p>}
+      <div className="form-actions sm:justify-end">
         <button disabled={loading} className="button-primary">
           {loading ? (mode === "create" ? "Création..." : "Enregistrement...") : mode === "create" ? "Créer l'action" : "Enregistrer"}
         </button>

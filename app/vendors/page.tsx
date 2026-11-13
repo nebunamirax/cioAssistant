@@ -6,14 +6,16 @@ import { getVendorById, listVendors } from "@/lib/services/vendor-service";
 import type { VendorFilters as VendorFiltersInput } from "@/lib/validation/vendor";
 
 type VendorsPageProps = {
-  searchParams?: {
+  searchParams?: Promise<{
     search?: string;
     category?: string;
     selectedId?: string;
-  };
+    new?: string;
+  }>;
 };
 
-export default async function VendorsPage({ searchParams }: VendorsPageProps) {
+export default async function VendorsPage({ searchParams: searchParamsPromise }: VendorsPageProps) {
+  const searchParams = await searchParamsPromise;
   const filters: VendorFiltersInput = {
     search: searchParams?.search,
     category: searchParams?.category
@@ -27,11 +29,15 @@ export default async function VendorsPage({ searchParams }: VendorsPageProps) {
   if (searchParams?.search) baseParams.set("search", searchParams.search);
   if (searchParams?.category) baseParams.set("category", searchParams.category);
 
-  const buildSelectionHref = (selectedId?: string) => {
+  const panelOpen = Boolean(selectedVendor || searchParams?.new === "1");
+
+  const buildSelectionHref = (selectedId?: string, create = false) => {
     const params = new URLSearchParams(baseParams);
 
     if (selectedId) {
       params.set("selectedId", selectedId);
+    } else if (create) {
+      params.set("new", "1");
     }
 
     const query = params.toString();
@@ -43,7 +49,6 @@ export default async function VendorsPage({ searchParams }: VendorsPageProps) {
       <div className="workbench-header">
         <div className="space-y-2">
           <h1 className="text-2xl font-semibold">Prestataires</h1>
-          <p className="text-sm text-slate-600">Travaille la base fournisseurs comme un annuaire opérable, avec lecture et édition simultanées.</p>
           <div className="workbench-kpi-grid">
             <div className="workbench-kpi">
               <div className="workbench-kpi-label">Prestataires</div>
@@ -53,20 +58,18 @@ export default async function VendorsPage({ searchParams }: VendorsPageProps) {
               <div className="workbench-kpi-label">Contrats</div>
               <div className="workbench-kpi-value">{selectedVendor?._count.contracts ?? "—"}</div>
             </div>
-            <div className="workbench-kpi">
-              <div className="workbench-kpi-label">Sélection</div>
-              <div className="workbench-kpi-value">{selectedVendor ? "1" : "0"}</div>
-            </div>
           </div>
         </div>
-        {selectedVendor && (
+        {panelOpen ? (
           <Link href={buildSelectionHref()} className="button-secondary">
-            Fermer le panneau
+            Fermer
           </Link>
+        ) : (
+          <Link href={buildSelectionHref(undefined, true)} className="button-primary">Nouveau prestataire</Link>
         )}
       </div>
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.7fr),420px]">
-        <section className="space-y-4">
+      <div className={panelOpen ? "workspace-split" : "space-y-4"}>
+        <section className="min-w-0 space-y-4">
           <VendorFilters values={filters} />
           <div className="workbench-table-shell">
             <table className="workbench-table">
@@ -111,20 +114,17 @@ export default async function VendorsPage({ searchParams }: VendorsPageProps) {
           </div>
         </section>
 
-        <aside className="space-y-4 xl:sticky xl:top-4 xl:self-start">
+        {panelOpen && <aside className="order-first min-w-0 space-y-4 xl:order-none">
           <section className="workbench-panel">
             <div className="mb-4 flex items-start justify-between gap-3">
               <div>
                 <h2 className="panel-title">
                   {selectedVendor ? "Éditer le prestataire" : "Nouveau prestataire"}
                 </h2>
-                <p className="panel-caption">
-                  {selectedVendor ? "Ajuste ici la fiche du prestataire sélectionné." : "Sélectionne un prestataire ou crée-en un nouveau."}
-                </p>
               </div>
               {selectedVendor && <VendorDeleteButton vendorId={selectedVendor.id} />}
             </div>
-            <VendorForm
+            <VendorForm key={selectedVendor?.id ?? "new"}
               mode={selectedVendor ? "edit" : "create"}
               vendorId={selectedVendor?.id}
               initialValues={selectedVendor ? {
@@ -148,7 +148,7 @@ export default async function VendorsPage({ searchParams }: VendorsPageProps) {
               <p><strong>Email:</strong> {selectedVendor.mainContactEmail ?? "—"}</p>
             </section>
           )}
-        </aside>
+        </aside>}
       </div>
     </div>
   );

@@ -1,51 +1,58 @@
+import { storeMilestone } from "../mutations";
+import { actionLabels, priorityLabels, projectLabels, projectTypeLabels } from "@/lib/domain/display-labels";
+import { ACTION_STATUSES } from "@/lib/domain/constants";
 import Link from "next/link";
-import { ProjectDeleteButton } from "@/components/projects/project-delete-button";
-import { ProjectForm } from "@/components/projects/project-form";
-import { PRIORITIES, PROJECT_STATUSES, PROJECT_TYPES } from "@/lib/domain/constants";
+import { prisma } from "@/lib/db/prisma";
 import { getProjectById } from "@/lib/services/project-service";
+import { ExternalProjectTracking } from "@/components/pilotage/external-project-tracking";
 import { notFound } from "next/navigation";
 
 function formatDate(value: Date | null) {
   return value ? new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium", timeStyle: "short" }).format(value) : "—";
 }
 
-export default async function ProjectDetailPage({ params }: { params: { id: string } }) {
-  const project = await getProjectById(params.id);
+export default async function ProjectDetailPage({ params: paramsPromise, searchParams: searchParamsPromise }: { params: Promise<{ id: string }>; searchParams?: Promise<{ source?: string; status?: string }> }) {
+  const params = await paramsPromise;
+  const searchParams = await searchParamsPromise;
+  const [project, owners] = await Promise.all([
+    getProjectById(params.id),
+    prisma.user.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } })
+  ]);
 
   if (!project) return notFound();
 
-  const type = PROJECT_TYPES.includes(project.type as (typeof PROJECT_TYPES)[number]) ? (project.type as (typeof PROJECT_TYPES)[number]) : "DEVELOPMENT";
-  const status = PROJECT_STATUSES.includes(project.status as (typeof PROJECT_STATUSES)[number]) ? (project.status as (typeof PROJECT_STATUSES)[number]) : "DRAFT";
-  const priority = PRIORITIES.includes(project.priority as (typeof PRIORITIES)[number]) ? (project.priority as (typeof PRIORITIES)[number]) : "NORMAL";
-
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <header className="workbench-header">
         <div>
-          <Link href="/projects" className="text-sm text-slate-600 hover:underline">
-            Retour aux projets
-          </Link>
-          <h1 className="text-2xl font-semibold">{project.title}</h1>
+          <Link href="/projects" className="pilot-row-link text-sm">← Projets</Link>
+          <h1 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">{project.title}</h1>
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-slate-600">
+            <span className="pilot-status" data-status={project.status}>{projectLabels[project.status] ?? project.status}</span>
+            <span>{projectTypeLabels[project.type] ?? project.type}</span>
+            <span>· Priorité {priorityLabels[project.priority]?.toLocaleLowerCase("fr-FR") ?? project.priority}</span>
+          </div>
         </div>
-        <ProjectDeleteButton projectId={project.id} />
-      </div>
+        <div className="flex shrink-0 flex-wrap gap-2">
+          <Link href={`/roadmap?project=${encodeURIComponent(project.id)}`} className="button-secondary">Voir le planning</Link>
+          <Link href={`/assistant?project=${encodeURIComponent(project.id)}`} className="button-secondary">Analyser un compte rendu</Link>
+          <Link href={`/projects?selectedId=${project.id}`} className="button-primary">Modifier le projet</Link>
+        </div>
+      </header>
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr),minmax(280px,1fr)]">
-        <ProjectForm
-          mode="edit"
-          projectId={project.id}
-          initialValues={{
-            title: project.title,
-            description: project.description ?? "",
-            type,
-            status,
-            priority,
-            startDate: project.startDate ? new Date(project.startDate).toISOString().slice(0, 16) : "",
-            targetDate: project.targetDate ? new Date(project.targetDate).toISOString().slice(0, 16) : ""
-          }}
-        />
-        <section className="space-y-3 rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-700">
-          <h2 className="font-semibold text-slate-900">Synthèse</h2>
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(240px,1fr)]">
+        <section className="workbench-panel space-y-3">
+          <h2 className="panel-title">Résumé</h2>
+          <p className="whitespace-pre-wrap break-words text-sm text-slate-700">{project.description || "Aucune description."}</p>
+          <dl className="grid gap-3 border-t border-slate-200 pt-3 text-sm sm:grid-cols-3">
+            <div><dt className="text-slate-600">Responsable</dt><dd className="font-medium">{owners.find((owner) => owner.id === project.ownerId)?.name ?? "À attribuer"}</dd></div>
+            <div><dt className="text-slate-600">Début</dt><dd className="font-medium">{formatDate(project.startDate)}</dd></div>
+            <div><dt className="text-slate-600">Date cible</dt><dd className="font-medium">{formatDate(project.targetDate)}</dd></div>
+          </dl>
+        </section>
+        <section className="workbench-panel space-y-2 text-sm text-slate-700">
+          <h2 className="panel-title">Suivi</h2>
+          <p><strong>Objectif stratégique</strong> {project.objective ? <Link className="pilot-row-link" href={`/strategy#${project.objective.id}`}>{project.objective.title}</Link> : <Link className="pilot-row-link" href="/strategy">Rattacher à un objectif</Link>}</p>
           <p><strong>Actions:</strong> {project._count.actions}</p>
           <p><strong>Contrats:</strong> {project._count.contracts}</p>
           <p><strong>Budget:</strong> {project._count.budgetItems}</p>
@@ -56,6 +63,19 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         </section>
       </div>
 
+      <section className="workbench-panel space-y-3">
+        <h2 className="panel-title">Jalons</h2>
+        {[...project.milestones, null].map((milestone) => <form key={milestone?.id ?? "new"} id={milestone?.id} action={storeMilestone} className="grid items-end gap-2 sm:grid-cols-4">
+          {milestone && <input type="hidden" name="id" value={milestone.id} />}
+          <input type="hidden" name="projectId" value={project.id} />
+          <label className="field-label">Intitulé<input className="field-input" name="title" defaultValue={milestone?.title} required minLength={3} maxLength={160} /></label>
+          <label className="field-label">Échéance<input className="field-input" type="date" name="dueDate" defaultValue={milestone?.dueDate?.toISOString().slice(0, 10)} /></label>
+          <label className="field-label">Statut<select className="field-select" name="status" defaultValue={milestone?.status ?? "TODO"}>{ACTION_STATUSES.map((status) => <option key={status} value={status}>{actionLabels[status]}</option>)}</select></label>
+          <button className="button-secondary">{milestone ? "Mettre à jour" : "Ajouter un jalon"}</button>
+        </form>)}
+      </section>
+      <ExternalProjectTracking projectId={project.id} source={searchParams?.source} status={searchParams?.status} />
+
       <div className="grid gap-4 xl:grid-cols-2">
         <section className="rounded-lg border border-slate-200 bg-white p-4">
           <h2 className="mb-3 font-semibold">Actions liées</h2>
@@ -65,7 +85,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
                 <Link href={`/actions/${action.id}`} className="font-medium text-slate-900 hover:underline">
                   {action.title}
                 </Link>{" "}
-                · {action.status}
+                · {actionLabels[action.status] ?? action.status}
               </p>
             ))}
             {project.actions.length === 0 && <p className="text-slate-500">Aucune action liée.</p>}
@@ -73,6 +93,11 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         </section>
 
         <section className="rounded-lg border border-slate-200 bg-white p-4">
+          <h2 className="mb-3 font-semibold">E-mails liés</h2>
+          <div className="mb-4 space-y-2 text-sm">
+            {project.emails.map((email) => <p key={email.id}><Link className="pilot-row-link" href={`/emails?selectedId=${email.id}`}>{email.subject}</Link></p>)}
+            <Link href={`/emails?projectId=${project.id}`} className="pilot-row-link">Voir les e-mails du projet</Link>
+          </div>
           <h2 className="mb-3 font-semibold">Contrats liés</h2>
           <div className="space-y-2 text-sm text-slate-700">
             {project.contracts.map((contract) => (

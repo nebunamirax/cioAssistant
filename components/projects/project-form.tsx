@@ -1,5 +1,6 @@
 "use client";
 
+import { projectTypeLabels, projectLabels, priorityLabels } from "@/lib/domain/display-labels";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { PRIORITIES, PROJECT_STATUSES, PROJECT_TYPES } from "@/lib/domain/constants";
@@ -10,6 +11,7 @@ type ProjectFormValues = {
   type: (typeof PROJECT_TYPES)[number];
   status: (typeof PROJECT_STATUSES)[number];
   priority: (typeof PRIORITIES)[number];
+  ownerId?: string | null;
   startDate?: string | null;
   targetDate?: string | null;
 };
@@ -19,17 +21,20 @@ type ProjectFormProps = {
   projectId?: string;
   initialValues?: Partial<ProjectFormValues>;
   showHeader?: boolean;
+  owners?: { id: string; name: string }[];
 };
 
-export function ProjectForm({ mode = "create", projectId, initialValues, showHeader = true }: ProjectFormProps) {
+export function ProjectForm({ mode = "create", projectId, initialValues, showHeader = true, owners }: ProjectFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [title, setTitle] = useState(initialValues?.title ?? "");
   const [description, setDescription] = useState(initialValues?.description ?? "");
   const [type, setType] = useState<(typeof PROJECT_TYPES)[number]>(initialValues?.type ?? "DEVELOPMENT");
   const [status, setStatus] = useState<(typeof PROJECT_STATUSES)[number]>(initialValues?.status ?? "DRAFT");
   const [priority, setPriority] = useState<(typeof PRIORITIES)[number]>(initialValues?.priority ?? "NORMAL");
+  const [ownerId, setOwnerId] = useState(initialValues?.ownerId ?? "");
   const [startDate, setStartDate] = useState(initialValues?.startDate ?? "");
   const [targetDate, setTargetDate] = useState(initialValues?.targetDate ?? "");
 
@@ -39,6 +44,7 @@ export function ProjectForm({ mode = "create", projectId, initialValues, showHea
     setType(initialValues?.type ?? "DEVELOPMENT");
     setStatus(initialValues?.status ?? "DRAFT");
     setPriority(initialValues?.priority ?? "NORMAL");
+    setOwnerId(initialValues?.ownerId ?? "");
     setStartDate(initialValues?.startDate ?? "");
     setTargetDate(initialValues?.targetDate ?? "");
   }, [initialValues, mode, projectId]);
@@ -47,40 +53,48 @@ export function ProjectForm({ mode = "create", projectId, initialValues, showHea
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setNotice(null);
 
-    const response = await fetch(projectId ? `/api/projects/${projectId}` : "/api/projects", {
-      method: projectId ? "PATCH" : "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title,
-        description,
-        type,
-        status,
-        priority,
-        startDate: startDate ? new Date(startDate).toISOString() : null,
-        targetDate: targetDate ? new Date(targetDate).toISOString() : null
-      })
-    });
-    const payload = await response.json();
+    try {
+      const response = await fetch(projectId ? `/api/projects/${projectId}` : "/api/projects", {
+        method: projectId ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title,
+          description,
+          type,
+          status,
+          priority,
+          ...(owners ? { ownerId: ownerId || null } : {}),
+          startDate: startDate ? new Date(startDate).toISOString() : null,
+          targetDate: targetDate ? new Date(targetDate).toISOString() : null
+        })
+      });
+      const payload = await response.json();
 
-    if (!response.ok) {
-      setError(payload.error ?? "Une erreur est survenue.");
+      if (!response.ok) {
+        setError(payload.error ?? "Une erreur est survenue.");
+        return;
+      }
+
+      if (mode === "create") {
+        setTitle("");
+        setDescription("");
+        setType("DEVELOPMENT");
+        setStatus("DRAFT");
+        setPriority("NORMAL");
+        setOwnerId("");
+        setStartDate("");
+        setTargetDate("");
+      }
+
+      setNotice(mode === "create" ? "Projet créé." : "Modifications enregistrées.");
+      router.refresh();
+    } catch {
+      setError("Impossible de joindre le serveur. Réessayez.");
+    } finally {
       setLoading(false);
-      return;
     }
-
-    if (mode === "create") {
-      setTitle("");
-      setDescription("");
-      setType("DEVELOPMENT");
-      setStatus("DRAFT");
-      setPriority("NORMAL");
-      setStartDate("");
-      setTargetDate("");
-    }
-
-    setLoading(false);
-    router.refresh();
   };
 
   return (
@@ -89,11 +103,10 @@ export function ProjectForm({ mode = "create", projectId, initialValues, showHea
       <section className="form-section space-y-3">
         <div>
           <h3 className="form-section-title">Cadre du projet</h3>
-          <p className="form-section-caption">Pose le périmètre du projet avant de détailler son pilotage.</p>
         </div>
         <div>
-          <label className="field-label">Titre</label>
-          <input
+          <label className="field-label" htmlFor="project-title">Titre</label>
+          <input id="project-title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Ex: Refonte du poste de travail"
@@ -102,8 +115,8 @@ export function ProjectForm({ mode = "create", projectId, initialValues, showHea
           />
         </div>
         <div>
-          <label className="field-label">Description</label>
-          <textarea
+          <label className="field-label" htmlFor="project-description">Description</label>
+          <textarea id="project-description"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Objectif, périmètre, résultat attendu..."
@@ -115,44 +128,51 @@ export function ProjectForm({ mode = "create", projectId, initialValues, showHea
       <section className="form-section space-y-3">
         <div>
           <h3 className="form-section-title">Pilotage</h3>
-          <p className="form-section-caption">Définis la nature du projet, son statut courant et son niveau de priorité.</p>
         </div>
         <div className="grid gap-3 md:grid-cols-3">
           <div>
-            <label className="field-label">Type</label>
-            <select value={type} onChange={(e) => setType(e.target.value as (typeof PROJECT_TYPES)[number])} className="field-select">
+            <label className="field-label" htmlFor="project-type">Type</label>
+            <select id="project-type" value={type} onChange={(e) => setType(e.target.value as (typeof PROJECT_TYPES)[number])} className="field-select">
               {PROJECT_TYPES.map((item) => (
-                <option key={item} value={item}>{item}</option>
+                <option key={item} value={item}>{projectTypeLabels[item]}</option>
               ))}
             </select>
           </div>
           <div>
-            <label className="field-label">Statut</label>
-            <select value={status} onChange={(e) => setStatus(e.target.value as (typeof PROJECT_STATUSES)[number])} className="field-select">
+            <label className="field-label" htmlFor="project-status">Statut</label>
+            <select id="project-status" value={status} onChange={(e) => setStatus(e.target.value as (typeof PROJECT_STATUSES)[number])} className="field-select">
               {PROJECT_STATUSES.map((item) => (
-                <option key={item} value={item}>{item}</option>
+                <option key={item} value={item}>{projectLabels[item]}</option>
               ))}
             </select>
           </div>
           <div>
-            <label className="field-label">Priorité</label>
-            <select value={priority} onChange={(e) => setPriority(e.target.value as (typeof PRIORITIES)[number])} className="field-select">
+            <label className="field-label" htmlFor="project-priority">Priorité</label>
+            <select id="project-priority" value={priority} onChange={(e) => setPriority(e.target.value as (typeof PRIORITIES)[number])} className="field-select">
               {PRIORITIES.map((item) => (
-                <option key={item} value={item}>{item}</option>
+                <option key={item} value={item}>{priorityLabels[item]}</option>
               ))}
             </select>
           </div>
         </div>
+        {owners && (
+          <label className="block">
+            <span className="field-label">Responsable du projet</span>
+            <select className="field-select" value={ownerId} onChange={(event) => setOwnerId(event.target.value)}>
+              <option value="">À attribuer</option>
+              {owners.map((owner) => <option key={owner.id} value={owner.id}>{owner.name}</option>)}
+            </select>
+          </label>
+        )}
       </section>
       <section className="form-section space-y-3">
         <div>
-          <h3 className="form-section-title">Temporalité</h3>
-          <p className="form-section-caption">Ajoute des repères de calendrier si tu veux faire remonter les alertes et les échéances.</p>
+          <h3 className="form-section-title">Dates</h3>
         </div>
         <div className="grid gap-3 md:grid-cols-2">
           <div>
-            <label className="field-label">Début</label>
-            <input
+            <label className="field-label" htmlFor="project-start">Début</label>
+            <input id="project-start"
               type="datetime-local"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
@@ -160,8 +180,8 @@ export function ProjectForm({ mode = "create", projectId, initialValues, showHea
             />
           </div>
           <div>
-            <label className="field-label">Cible</label>
-            <input
+            <label className="field-label" htmlFor="project-target">Date cible</label>
+            <input id="project-target"
               type="datetime-local"
               value={targetDate}
               onChange={(e) => setTargetDate(e.target.value)}
@@ -170,9 +190,9 @@ export function ProjectForm({ mode = "create", projectId, initialValues, showHea
           </div>
         </div>
       </section>
-      {error && <p className="text-sm text-red-600">{error}</p>}
-      <div className="form-actions">
-        <p className="form-actions-note">Le panneau garde le contexte de portefeuille pendant l’édition.</p>
+      {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
+      {notice && <p role="status" className="text-sm text-emerald-800">{notice}</p>}
+      <div className="form-actions sm:justify-end">
         <button disabled={loading} className="button-primary">
           {loading ? (mode === "create" ? "Création..." : "Enregistrement...") : mode === "create" ? "Créer le projet" : "Enregistrer"}
         </button>

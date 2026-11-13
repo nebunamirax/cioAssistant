@@ -1,21 +1,29 @@
+import { requireMember } from "@/lib/auth/session";
+import { prisma } from "@/lib/db/prisma";
 import Link from "next/link";
+import { actionLabels, priorityLabels } from "@/lib/domain/display-labels";
 import { ActionDeleteButton } from "@/components/actions/action-delete-button";
 import { ActionForm } from "@/components/actions/action-form";
 import { ActionFilters } from "@/components/actions/action-filters";
 import { ActionKanbanView } from "@/components/actions/action-kanban-view";
 import { ACTION_STATUSES, PRIORITIES } from "@/lib/domain/constants";
 import { getActionById, listActions } from "@/lib/services/action-service";
+import { pilotageDate } from "@/lib/services/pilotage-service";
 import type { ActionFilters as ActionFiltersInput } from "@/lib/validation/action";
 
 type ActionsPageProps = {
-  searchParams?: {
+  searchParams?: Promise<{
     search?: string;
     status?: string;
     priority?: string;
+    projectId?: string;
+    unassigned?: string;
+    openOnly?: string;
     overdueOnly?: string;
     selectedId?: string;
+    new?: string;
     view?: string;
-  };
+  }>;
 };
 
 type ActionStatusValue = NonNullable<ActionFiltersInput["status"]>;
@@ -33,7 +41,11 @@ function isView(value: string | undefined): value is "list" | "kanban" {
   return value === "list" || value === "kanban";
 }
 
-export default async function ActionsPage({ searchParams }: ActionsPageProps) {
+export default async function ActionsPage({ searchParams: searchParamsPromise }: ActionsPageProps) {
+  const now = new Date();
+  const actor = await requireMember();
+  const apprentice = actor.role !== "DSI";
+  const searchParams = await searchParamsPromise;
   const status: ActionFiltersInput["status"] = searchParams?.status && isActionStatus(searchParams.status)
     ? searchParams.status
     : undefined;
@@ -41,17 +53,31 @@ export default async function ActionsPage({ searchParams }: ActionsPageProps) {
     ? searchParams.priority
     : undefined;
   const view = isView(searchParams?.view) ? searchParams?.view : "list";
+  const unassigned = searchParams?.unassigned === "true" || searchParams?.projectId === "__unassigned";
+  const projectId = !unassigned && typeof searchParams?.projectId === "string" && searchParams.projectId.trim().length <= 250
+    ? searchParams.projectId.trim() || undefined
+    : undefined;
+  const search = typeof searchParams?.search === "string" ? searchParams.search : undefined;
+  const selectedId = typeof searchParams?.selectedId === "string" ? searchParams.selectedId : undefined;
   const filters: ActionFiltersInput = {
-    search: searchParams?.search,
+    search,
     status,
     priority,
+    projectId,
+    unassigned,
+    openOnly: searchParams?.openOnly === "true",
     overdueOnly: searchParams?.overdueOnly === "true"
   };
-  const [actions, selectedAction] = await Promise.all([
+  const [actions, selectedAction, members, projectOptions, notes] = await Promise.all([
     listActions(filters),
-    searchParams?.selectedId ? getActionById(searchParams.selectedId) : null
+    selectedId ? getActionById(selectedId) : null,
+    apprentice ? undefined : prisma.user.findMany({ select: { id: true, name: true, email: true }, orderBy: { name: "asc" } }),
+    prisma.project.findMany({ select: { id: true, title: true }, orderBy: { title: "asc" } }),
+    selectedId ? prisma.note.findMany({ where: { entityType: "ACTION", entityId: selectedId }, orderBy: { createdAt: "desc" } }) : []
+
   ]);
 
+  const canEdit = !apprentice || !selectedAction || selectedAction.ownerId === actor.id;
   const selectedActionStatus = selectedAction && ACTION_STATUSES.includes(selectedAction.status as (typeof ACTION_STATUSES)[number])
     ? (selectedAction.status as (typeof ACTION_STATUSES)[number])
     : "TODO";
@@ -60,17 +86,24 @@ export default async function ActionsPage({ searchParams }: ActionsPageProps) {
     : "NORMAL";
   const baseParams = new URLSearchParams();
 
-  if (searchParams?.search) baseParams.set("search", searchParams.search);
+  if (search) baseParams.set("search", search);
   if (status) baseParams.set("status", status);
   if (priority) baseParams.set("priority", priority);
+  if (projectId) baseParams.set("projectId", projectId);
+  if (filters.unassigned) baseParams.set("unassigned", "true");
+  if (filters.openOnly) baseParams.set("openOnly", "true");
   if (searchParams?.overdueOnly === "true") baseParams.set("overdueOnly", "true");
   if (view === "kanban") baseParams.set("view", "kanban");
 
-  const buildSelectionHref = (selectedId?: string) => {
+  const panelOpen = Boolean(selectedAction || searchParams?.new === "1");
+
+  const buildSelectionHref = (selectedId?: string, create = false) => {
     const params = new URLSearchParams(baseParams);
 
     if (selectedId) {
       params.set("selectedId", selectedId);
+    } else if (create) {
+      params.set("new", "1");
     }
 
     const query = params.toString();
@@ -86,8 +119,10 @@ export default async function ActionsPage({ searchParams }: ActionsPageProps) {
       params.delete("view");
     }
 
-    if (searchParams?.selectedId) {
-      params.set("selectedId", searchParams.selectedId);
+    if (selectedId) {
+      params.set("selectedId", selectedId);
+    } else if (searchParams?.new === "1") {
+      params.set("new", "1");
     }
 
     const query = params.toString();
@@ -97,7 +132,7 @@ export default async function ActionsPage({ searchParams }: ActionsPageProps) {
   const kanbanActions = actions.map((action) => ({
     id: action.id,
     title: action.title,
-    ownerName: action.ownerName ?? null,
+    ownerName: action.owner?.name ?? action.ownerName ?? null,
     status: ACTION_STATUSES.includes(action.status as (typeof ACTION_STATUSES)[number])
       ? (action.status as (typeof ACTION_STATUSES)[number])
       : "TODO",
@@ -108,57 +143,59 @@ export default async function ActionsPage({ searchParams }: ActionsPageProps) {
 
   return (
     <div className="space-y-4">
-      <div className="workbench-header">
+      <header className="workbench-header">
         <div className="space-y-2">
-          <h1 className="text-2xl font-semibold">Actions</h1>
-          <p className="text-sm text-slate-600">Pilote les tâches dans une vue compacte avec bascule liste ou kanban, sélection, édition et contexte sur le même écran.</p>
-          <div className="workbench-kpi-grid">
-            <div className="workbench-kpi">
-              <div className="workbench-kpi-label">Total</div>
-              <div className="workbench-kpi-value">{actions.length}</div>
-            </div>
-            <div className="workbench-kpi">
-              <div className="workbench-kpi-label">En retard</div>
-              <div className="workbench-kpi-value">{actions.filter((action) => action.dueDate && action.status !== "DONE" && action.dueDate < new Date()).length}</div>
-            </div>
-            <div className="workbench-kpi">
-              <div className="workbench-kpi-label">Sélection</div>
-              <div className="workbench-kpi-value">{selectedAction ? "1" : "0"}</div>
-            </div>
-          </div>
-          <div className="inline-flex w-fit rounded-2xl border border-slate-200 bg-slate-50 p-1">
-            <Link
-              href={buildViewHref("list")}
-              className={`rounded-xl px-3 py-2 text-sm font-medium ${view === "list" ? "bg-white text-slate-950 shadow-sm" : "text-slate-600 hover:text-slate-950"}`}
-            >
-              Vue liste
-            </Link>
-            <Link
-              href={buildViewHref("kanban")}
-              className={`rounded-xl px-3 py-2 text-sm font-medium ${view === "kanban" ? "bg-white text-slate-950 shadow-sm" : "text-slate-600 hover:text-slate-950"}`}
-            >
-              Vue kanban
-            </Link>
-          </div>
+          <h1 className="workspace-page-title">Actions</h1>
+          {projectId && <Link className="pilot-row-link text-sm" href={`/roadmap?project=${encodeURIComponent(projectId)}`}>← Planning du projet</Link>}
+          <p className="text-sm text-slate-600">{actions.length} {actions.length === 1 ? "action affichée" : "actions affichées"}</p>
         </div>
-        {selectedAction && (
-          <Link href={buildSelectionHref()} className="button-secondary">
-            Fermer le panneau
-          </Link>
-        )}
-      </div>
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.7fr),420px]">
-        <section className="space-y-4">
-          <ActionFilters values={filters} view={view} />
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="workspace-segment" aria-label="Affichage des actions">
+            <Link
+              href={buildViewHref("list")} aria-current={view === "list" ? "true" : undefined}
+              className="workspace-segment-link"
+            >
+              Liste
+            </Link>
+            <Link
+              href={buildViewHref("kanban")} aria-current={view === "kanban" ? "true" : undefined}
+              className="workspace-segment-link"
+            >
+              Kanban
+            </Link>
+          </div>
+          {panelOpen ? (
+            <Link href={buildSelectionHref()} className="button-secondary">Fermer</Link>
+          ) : (
+            <Link href={buildSelectionHref(undefined, true)} className="button-primary">Nouvelle action</Link>
+          )}
+        </div>
+      </header>
+      <div className={panelOpen ? "workspace-split" : "space-y-4"}>
+        <section className="min-w-0 space-y-4">
+          <ActionFilters key={baseParams.toString()} values={filters} view={view} projects={projectOptions} />
           {view === "kanban" ? (
             <ActionKanbanView
               actions={kanbanActions}
-              selectedId={searchParams?.selectedId}
+              now={now.getTime()}
+              selectedId={selectedId}
               baseSearchParams={baseParams.toString()}
             />
           ) : (
             <div className="workbench-table-shell">
-              <table className="workbench-table">
+              <ul className="workspace-feed border-t-0 sm:hidden" aria-label="Actions">
+                {actions.map((action) => <li key={action.id}>
+                  <Link href={buildSelectionHref(action.id)} className="workspace-feed-row" aria-current={selectedId === action.id ? "true" : undefined}>
+                    <span className="workspace-feed-text">
+                      <strong>{action.title}</strong>
+                      <span>{[action.project?.title, action.owner?.name ?? action.ownerName, action.dueDate && pilotageDate(action.dueDate)].filter(Boolean).join(" · ")}</span>
+                    </span>
+                    <span className="pilot-status" data-status={action.status}>{actionLabels[action.status] ?? action.status}</span>
+                  </Link>
+                </li>)}
+                {!actions.length && <li className="workspace-empty">Aucune action.</li>}
+              </ul>
+              <table className="workbench-table hidden sm:table">
                 <thead>
                   <tr>
                     <th>Titre</th>
@@ -167,32 +204,26 @@ export default async function ActionsPage({ searchParams }: ActionsPageProps) {
                     <th>Priorité</th>
                     <th>Projet</th>
                     <th>Échéance</th>
-                    <th>Modifier</th>
                   </tr>
                 </thead>
                 <tbody>
                   {actions.map((action) => (
-                    <tr key={action.id} data-selected={searchParams?.selectedId === action.id}>
+                    <tr key={action.id} data-selected={selectedId === action.id}>
                       <td>
                         <Link href={buildSelectionHref(action.id)} className="font-medium text-slate-900 hover:underline">
                           {action.title}
                         </Link>
                       </td>
-                      <td>{action.ownerName ?? "—"}</td>
-                      <td>{action.status}</td>
-                      <td>{action.priority}</td>
+                      <td>{action.owner?.name ?? action.ownerName ?? "—"}</td>
+                      <td><span className="pilot-status" data-status={action.status}>{actionLabels[action.status] ?? action.status}</span></td>
+                      <td>{priorityLabels[action.priority] ?? action.priority}</td>
                       <td>{action.project?.title ?? "—"}</td>
-                      <td>{action.dueDate ? new Intl.DateTimeFormat("fr-FR").format(action.dueDate) : "—"}</td>
-                      <td>
-                        <Link href={buildSelectionHref(action.id)} className="text-slate-900 hover:underline">
-                          Modifier
-                        </Link>
-                      </td>
+                      <td>{pilotageDate(action.dueDate)}</td>
                     </tr>
                   ))}
                   {actions.length === 0 && (
                     <tr>
-                      <td colSpan={7} className="text-slate-500">
+                      <td colSpan={6} className="text-slate-500">
                         Aucune action.
                       </td>
                     </tr>
@@ -203,48 +234,56 @@ export default async function ActionsPage({ searchParams }: ActionsPageProps) {
           )}
         </section>
 
-        <aside className="space-y-4 xl:sticky xl:top-4 xl:self-start">
+        {panelOpen && <aside className="order-first min-w-0 space-y-4 xl:order-none">
           <section className="workbench-panel">
             <div className="mb-4 flex items-start justify-between gap-3">
               <div>
                 <h2 className="panel-title">
-                  {selectedAction ? "Éditer l'action" : "Nouvelle action"}
+                  {selectedAction ? canEdit ? "Modifier l’action" : "Détail de l’action" : "Nouvelle action"}
                 </h2>
-                <p className="panel-caption">
-                  {selectedAction ? "Modifie directement les champs préremplis ci-dessous." : "Sélectionne une ligne ou crée directement une nouvelle action."}
-                </p>
               </div>
-              {selectedAction && <ActionDeleteButton actionId={selectedAction.id} />}
+              {selectedAction && !apprentice && <ActionDeleteButton actionId={selectedAction.id} />}
             </div>
-            <ActionForm
+            {!canEdit && selectedAction && <p className="text-sm text-slate-600">{actionLabels[selectedAction.status] ?? selectedAction.status} · {selectedAction.title}</p>}
+            {canEdit && <ActionForm key={selectedAction?.id ?? "new"}
+              apprentice={apprentice}
+              members={members}
+              projectOptions={projectOptions}
               mode={selectedAction ? "edit" : "create"}
               actionId={selectedAction?.id}
               initialValues={selectedAction ? {
                 title: selectedAction.title,
                 description: selectedAction.description ?? "",
+                ownerId: selectedAction.ownerId,
                 ownerName: selectedAction.ownerName ?? "",
                 status: selectedActionStatus,
                 priority: selectedActionPriority,
                 dueDate: selectedAction.dueDate ? new Date(selectedAction.dueDate).toISOString().slice(0, 16) : "",
                 projectId: selectedAction.projectId ?? ""
-              } : undefined}
+              } : projectId && !filters.unassigned && projectOptions.some((project) => project.id === projectId) ? { projectId } : undefined}
               showHeader={false}
-            />
+            />}
           </section>
 
           {selectedAction && (
             <section className="workbench-panel panel-stat-list">
               <h3 className="panel-title">Contexte</h3>
+              {selectedAction.sourceUrl && <p><a href={selectedAction.sourceUrl} rel="noreferrer">Ouvrir le ticket d’origine</a></p>}
+              {notes.map((note) => <p key={note.id}><strong>{note.title}</strong> · {note.content}</p>)}
+              {canEdit && <form method="post" action={`/api/actions/${selectedAction.id}/notes`}>
+                <label className="field-label">Note <textarea className="field-textarea" name="content" required maxLength={5000} /></label>
+                <button className="button-secondary">Ajouter la note</button>
+              </form>}
               <p><strong>Projet:</strong> {selectedAction.project?.title ?? "—"}</p>
-              <p><strong>Responsable:</strong> {selectedAction.ownerName ?? "—"}</p>
+              <p><strong>Responsable:</strong> {selectedAction.owner?.name ?? selectedAction.ownerName ?? "—"}</p>
               <p><strong>Fournisseur:</strong> {selectedAction.vendor?.name ?? "—"}</p>
               <p><strong>Contrat:</strong> {selectedAction.contract?.title ?? "—"}</p>
-              <p><strong>Source:</strong> {selectedAction.sourceType === "MEETING_NOTE" ? selectedAction.sourceRef ?? "Réunion" : selectedAction.sourceRef ?? "—"}</p>
+              <p><strong>Source:</strong> {selectedAction.sourceType === "EMAIL" && selectedAction.sourceRef ? <Link href={`/emails?selectedId=${selectedAction.sourceRef}`} className="pilot-row-link">E-mail d’origine</Link> : selectedAction.sourceRef ?? "—"}</p>
               <p><strong>Créée le:</strong> {new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium", timeStyle: "short" }).format(selectedAction.createdAt)}</p>
               <p><strong>Terminée le:</strong> {selectedAction.completedAt ? new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium", timeStyle: "short" }).format(selectedAction.completedAt) : "—"}</p>
             </section>
           )}
-        </aside>
+        </aside>}
       </div>
     </div>
   );

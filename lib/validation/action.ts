@@ -4,6 +4,7 @@ import { z } from "zod";
 export const actionSchema = z.object({
   title: z.string().min(3),
   description: z.string().optional(),
+  ownerId: z.string().min(1).optional().nullable(),
   ownerName: z.string().optional().nullable(),
   status: z.enum(ACTION_STATUSES).default("TODO"),
   priority: z.enum(PRIORITIES).default("NORMAL"),
@@ -25,6 +26,9 @@ export const actionFilterSchema = z.object({
   search: z.string().trim().optional(),
   status: z.enum(ACTION_STATUSES).optional(),
   priority: z.enum(PRIORITIES).optional(),
+  projectId: z.string().trim().min(1).max(250).optional(),
+  unassigned: z.boolean().optional(),
+  openOnly: z.boolean().optional(),
   overdueOnly: z.boolean().optional().default(false)
 });
 

@@ -66,7 +66,7 @@ export function EmailLinkForm({
       <section className="form-section space-y-3">
         <div>
           <h3 className="form-section-title">Rattachement</h3>
-          <p className="form-section-caption">Associe l'email a un projet ou une action deja suivie dans le cockpit.</p>
+          <p className="form-section-caption">Associe l&apos;email a un projet ou une action deja suivie dans le cockpit.</p>
         </div>
         <label>
           <span className="field-label">Projet lie</span>

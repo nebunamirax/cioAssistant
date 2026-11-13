@@ -7,11 +7,11 @@ import { getMeetingNoteById, listMeetingNotes } from "@/lib/services/meeting-not
 import type { MeetingNoteFilters as MeetingNoteFiltersInput } from "@/lib/validation/meeting-note";
 
 type MeetingsPageProps = {
-  searchParams?: {
+  searchParams?: Promise<{
     search?: string;
     projectId?: string;
     selectedId?: string;
-  };
+  }>;
 };
 
 function formatDate(value: Date) {
@@ -22,16 +22,21 @@ function formatShortDate(value: Date) {
   return new Intl.DateTimeFormat("fr-FR", { dateStyle: "short" }).format(value);
 }
 
-export default async function MeetingsPage({ searchParams }: MeetingsPageProps) {
+export default async function MeetingsPage({ searchParams: searchParamsPromise }: MeetingsPageProps) {
+  const searchParams = await searchParamsPromise;
   const filters: MeetingNoteFiltersInput = {
     search: searchParams?.search,
     projectId: searchParams?.projectId
   };
 
-  const [meetingNotes, projects, selectedMeetingNote] = await Promise.all([
+  const [meetingNotes, projects, selectedMeetingNote, linked] = await Promise.all([
     listMeetingNotes(filters),
     prisma.project.findMany({ orderBy: { title: "asc" }, select: { id: true, title: true } }),
-    searchParams?.selectedId ? getMeetingNoteById(searchParams.selectedId) : null
+    searchParams?.selectedId ? getMeetingNoteById(searchParams.selectedId) : null,
+    searchParams?.selectedId ? prisma.meetingNote.findUnique({
+      where: { id: searchParams.selectedId },
+      select: { actions: { select: { id: true, title: true } }, risks: { select: { id: true, title: true } }, decisions: { select: { id: true, subject: true } } }
+    }) : null
   ]);
   const baseParams = new URLSearchParams();
 
@@ -65,41 +70,19 @@ export default async function MeetingsPage({ searchParams }: MeetingsPageProps) 
 
   return (
     <div className="space-y-4">
-      <section className="rounded-[24px] border border-slate-200/80 bg-white/90 p-4 shadow-[0_24px_60px_-42px_rgba(15,23,42,0.35)] sm:p-5">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-          <div className="space-y-1.5">
-            <h1 className="text-xl font-semibold text-slate-950 sm:text-2xl">Reunions</h1>
-            <p className="max-w-2xl text-sm text-slate-600">
-              Capture le brut, genere la synthese, puis convertis les suites en actions sans te perdre dans une colonne secondaire interminable.
-            </p>
-          </div>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            <div className="rounded-xl border border-slate-200 bg-slate-50/90 px-3 py-2">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">Reunions</p>
-              <p className="mt-1 text-base font-semibold text-slate-950">{meetingNotes.length}</p>
-            </div>
-            <div className="rounded-xl border border-slate-200 bg-slate-50/90 px-3 py-2">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">Extraction</p>
-              <p className="mt-1 text-base font-semibold text-slate-950">{totalExtractedItems}</p>
-            </div>
-            <div className="rounded-xl border border-slate-200 bg-slate-50/90 px-3 py-2">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">Actions creees</p>
-              <p className="mt-1 text-base font-semibold text-slate-950">{createdActions}</p>
-            </div>
-            <div className="rounded-xl border border-slate-200 bg-slate-50/90 px-3 py-2">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">Selection</p>
-              <p className="mt-1 text-base font-semibold text-slate-950">{selectedMeetingNote ? "1" : "0"}</p>
-            </div>
-          </div>
+      <header className="workbench-header">
+        <div>
+          <h1 className="text-2xl font-semibold">Réunions</h1>
+          <p className="mt-2 text-sm text-slate-600">{meetingNotes.length} réunions · {totalExtractedItems} éléments relevés · {createdActions} actions créées</p>
         </div>
-      </section>
+        <Link href="/meetings#compte-rendu" className="button-primary">Nouveau compte rendu</Link>
+      </header>
 
       <div className="grid gap-4 xl:grid-cols-[340px,minmax(0,1fr)]">
         <aside className="space-y-4 xl:sticky xl:top-4 xl:self-start">
           <section className="workbench-panel">
             <div className="mb-3 space-y-1">
               <h2 className="panel-title">Historique</h2>
-              <p className="panel-caption">Filtre puis ouvre une reunion pour la reprendre rapidement.</p>
             </div>
             <MeetingFilters values={filters} projectOptions={projects} />
           </section>
@@ -169,12 +152,12 @@ export default async function MeetingsPage({ searchParams }: MeetingsPageProps) 
         </aside>
 
         <section className="space-y-4">
-          <section className="workbench-panel">
+          <section id="compte-rendu" className="workbench-panel scroll-mt-20">
             <div className="mb-4 flex flex-col gap-3 border-b border-slate-200 pb-4 sm:flex-row sm:items-start sm:justify-between">
               <div className="space-y-2">
                 <div className="flex flex-wrap items-center gap-2">
                   <h2 className="text-lg font-semibold text-slate-950">
-                    {selectedMeetingNote ? "Edition de reunion" : "Nouvelle reunion"}
+                    {selectedMeetingNote ? "Modifier le compte rendu" : "Nouveau compte rendu"}
                   </h2>
                   {selectedMeetingNote ? (
                     <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
@@ -182,18 +165,13 @@ export default async function MeetingsPage({ searchParams }: MeetingsPageProps) 
                     </span>
                   ) : null}
                 </div>
-                <p className="text-sm text-slate-600">
-                  {selectedMeetingNote
-                    ? "Le compte-rendu est edite sur une seule surface. Le brut, la synthese et les suites restent visibles ensemble."
-                    : "Commence par le brut ou l'audio, puis affine la synthese et les actions dans la meme zone de travail."}
-                </p>
                 {selectedMeetingNote ? (
                   <div className="flex flex-wrap gap-2 text-xs text-slate-600">
                     <span className="rounded-full bg-slate-100 px-2.5 py-1">Projet: {selectedMeetingNote.project?.title ?? "Sans projet"}</span>
                     <span className="rounded-full bg-slate-100 px-2.5 py-1">Participants: {selectedMeetingNote.attendees.length}</span>
                     <span className="rounded-full bg-slate-100 px-2.5 py-1">Actions: {selectedMeetingNote.extractedActions.length}</span>
                     <span className="rounded-full bg-slate-100 px-2.5 py-1">
-                      Creees: {selectedMeetingNote.extractedActions.filter((action) => action.createdActionId).length}
+                      Créées · {selectedMeetingNote.extractedActions.filter((action) => action.createdActionId).length}
                     </span>
                   </div>
                 ) : null}
@@ -202,14 +180,23 @@ export default async function MeetingsPage({ searchParams }: MeetingsPageProps) 
                 {selectedMeetingNote ? (
                   <>
                     <Link href={buildSelectionHref()} className="button-secondary">
-                      Nouvelle reunion
+                      Nouveau compte rendu
                     </Link>
                     <MeetingDeleteButton meetingNoteId={selectedMeetingNote.id} />
                   </>
                 ) : null}
               </div>
             </div>
+            {linked && (linked.actions.length + linked.risks.length + linked.decisions.length > 0) && <section className="mb-4 rounded-xl border p-3">
+              <h3 className="mb-2 font-semibold">Fiches liées</h3>
+              <ul className="space-y-1 text-sm">
+                {linked.actions.map((item) => <li key={item.id}><Link className="pilot-row-link" href={`/actions?selectedId=${item.id}`}>Action · {item.title}</Link></li>)}
+                {linked.risks.map((item) => <li key={item.id}><Link className="pilot-row-link" href={`/risks#${item.id}`}>Risque · {item.title}</Link></li>)}
+                {linked.decisions.map((item) => <li key={item.id}><Link className="pilot-row-link" href={`/decisions#${item.id}`}>Décision · {item.subject}</Link></li>)}
+              </ul>
+            </section>}
             <MeetingForm
+              key={selectedMeetingNote?.id ?? "new"}
               mode={selectedMeetingNote ? "edit" : "create"}
               meetingNoteId={selectedMeetingNote?.id}
               projectOptions={projects}

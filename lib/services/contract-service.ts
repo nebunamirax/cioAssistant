@@ -102,9 +102,9 @@ export async function listContracts(filters?: ContractFilters) {
   });
 }
 
-export async function createContract(payload: ContractInput) {
+export async function createContract(payload: ContractInput, db: Prisma.TransactionClient = prisma) {
   const validated = contractSchema.parse(payload);
-  return prisma.contract.create({
+  return db.contract.create({
     data: buildContractCreateData(validated)
   });
 }
@@ -143,9 +143,9 @@ export async function getContractById(id: string) {
   });
 }
 
-export async function updateContract(id: string, payload: ContractUpdateInput) {
+export async function updateContract(id: string, payload: ContractUpdateInput, db: Prisma.TransactionClient = prisma) {
   const validated = contractUpdateSchema.parse(payload);
-  return prisma.contract.update({
+  return db.contract.update({
     where: { id },
     data: buildContractUpdateData(validated)
   });

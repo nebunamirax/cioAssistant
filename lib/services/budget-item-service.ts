@@ -79,9 +79,9 @@ export async function listBudgetItems(filters?: BudgetItemFilters) {
   });
 }
 
-export async function createBudgetItem(payload: BudgetItemInput) {
+export async function createBudgetItem(payload: BudgetItemInput, db: Prisma.TransactionClient = prisma) {
   const validated = budgetItemSchema.parse(payload);
-  return prisma.budgetItem.create({
+  return db.budgetItem.create({
     data: buildBudgetItemCreateData(validated)
   });
 }
@@ -97,9 +97,9 @@ export async function getBudgetItemById(id: string) {
   });
 }
 
-export async function updateBudgetItem(id: string, payload: BudgetItemUpdateInput) {
+export async function updateBudgetItem(id: string, payload: BudgetItemUpdateInput, db: Prisma.TransactionClient = prisma) {
   const validated = budgetItemUpdateSchema.parse(payload);
-  return prisma.budgetItem.update({
+  return db.budgetItem.update({
     where: { id },
     data: buildBudgetItemUpdateData(validated)
   });

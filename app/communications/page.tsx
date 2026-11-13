@@ -9,7 +9,7 @@ import { getCommunicationById, listCommunications } from "@/lib/services/communi
 import type { CommunicationFilters as CommunicationFiltersInput } from "@/lib/validation/communication";
 
 type CommunicationsPageProps = {
-  searchParams?: {
+  searchParams?: Promise<{
     search?: string;
     status?: string;
     type?: string;
@@ -17,7 +17,8 @@ type CommunicationsPageProps = {
     actionId?: string;
     contractId?: string;
     selectedId?: string;
-  };
+    new?: string;
+  }>;
 };
 
 type CommunicationStatusValue = NonNullable<CommunicationFiltersInput["status"]>;
@@ -30,7 +31,8 @@ function formatDate(value: Date) {
   return new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium", timeStyle: "short" }).format(value);
 }
 
-export default async function CommunicationsPage({ searchParams }: CommunicationsPageProps) {
+export default async function CommunicationsPage({ searchParams: searchParamsPromise }: CommunicationsPageProps) {
+  const searchParams = await searchParamsPromise;
   const status: CommunicationFiltersInput["status"] = searchParams?.status && isCommunicationStatus(searchParams.status)
     ? searchParams.status
     : undefined;
@@ -64,11 +66,15 @@ export default async function CommunicationsPage({ searchParams }: Communication
   if (searchParams?.actionId) baseParams.set("actionId", searchParams.actionId);
   if (searchParams?.contractId) baseParams.set("contractId", searchParams.contractId);
 
-  const buildSelectionHref = (selectedId?: string) => {
+  const panelOpen = Boolean(selectedCommunication || searchParams?.new === "1");
+
+  const buildSelectionHref = (selectedId?: string, create = false) => {
     const params = new URLSearchParams(baseParams);
 
     if (selectedId) {
       params.set("selectedId", selectedId);
+    } else if (create) {
+      params.set("new", "1");
     }
 
     const query = params.toString();
@@ -80,7 +86,6 @@ export default async function CommunicationsPage({ searchParams }: Communication
       <div className="workbench-header">
         <div className="space-y-2">
           <h1 className="text-2xl font-semibold">Communications</h1>
-          <p className="text-sm text-slate-600">Rédige, contextualise et exporte les communications sans sortir de la vue portefeuille.</p>
           <div className="workbench-kpi-grid">
             <div className="workbench-kpi">
               <div className="workbench-kpi-label">Communications</div>
@@ -90,20 +95,18 @@ export default async function CommunicationsPage({ searchParams }: Communication
               <div className="workbench-kpi-label">Template</div>
               <div className="workbench-kpi-value">{selectedCommunication ? (getCommunicationTemplate(selectedCommunication.templateKey)?.label ?? "Libre") : "—"}</div>
             </div>
-            <div className="workbench-kpi">
-              <div className="workbench-kpi-label">Sélection</div>
-              <div className="workbench-kpi-value">{selectedCommunication ? "1" : "0"}</div>
-            </div>
           </div>
         </div>
-        {selectedCommunication && (
+        {panelOpen ? (
           <Link href={buildSelectionHref()} className="button-secondary">
-            Fermer le panneau
+            Fermer
           </Link>
+        ) : (
+          <Link href={buildSelectionHref(undefined, true)} className="button-primary">Nouvelle communication</Link>
         )}
       </div>
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.7fr),460px]">
-        <section className="space-y-4">
+      <div className={panelOpen ? "workspace-split" : "space-y-4"}>
+        <section className="min-w-0 space-y-4">
           <CommunicationFilters
             values={filters}
             projectOptions={projectOptions}
@@ -171,20 +174,17 @@ export default async function CommunicationsPage({ searchParams }: Communication
           </div>
         </section>
 
-        <aside className="space-y-4 xl:sticky xl:top-4 xl:self-start">
+        {panelOpen && <aside className="order-first min-w-0 space-y-4 xl:order-none">
           <section className="workbench-panel">
             <div className="mb-4 flex items-start justify-between gap-3">
               <div>
                 <h2 className="panel-title">
                   {selectedCommunication ? "Éditer la communication" : "Nouvelle communication"}
                 </h2>
-                <p className="panel-caption">
-                  {selectedCommunication ? "Retouche le brouillon existant directement dans les champs préremplis." : "Rédige un brouillon ou ajuste un template sans quitter la liste."}
-                </p>
               </div>
               {selectedCommunication && <CommunicationDeleteButton communicationId={selectedCommunication.id} />}
             </div>
-            <CommunicationForm
+            <CommunicationForm key={selectedCommunication?.id ?? "new"}
               mode={selectedCommunication ? "edit" : "create"}
               communicationId={selectedCommunication?.id}
               projectOptions={projectOptions}
@@ -225,7 +225,7 @@ export default async function CommunicationsPage({ searchParams }: Communication
               </p>
             </section>
           )}
-        </aside>
+        </aside>}
       </div>
     </div>
   );

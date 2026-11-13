@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { COMMUNICATION_STATUSES } from "@/lib/domain/constants";
 
 type Option = {
@@ -77,9 +78,9 @@ export function CommunicationFilters({
         <button type="submit" className="button-primary">
           Filtrer
         </button>
-        <a href="/communications" className="button-secondary">
+        <Link href="/communications" className="button-secondary">
           Réinitialiser
-        </a>
+        </Link>
         <a href="/api/export/markdown" className="button-secondary">
           Export Markdown
         </a>

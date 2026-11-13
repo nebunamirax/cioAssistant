@@ -30,6 +30,20 @@
 - Auth Microsoft.
 - Import email et conversion vers actions.
 
+## Suivi externe des projets
+
+- V1 personnelle dans Docker, sur TypeScript, Next.js, Prisma et SQLite. Les éléments externes conservent leur provenance et leur identifiant, avec un suivi distinct des actions locales.
+- Planner standard en lecture seule. Sélection du plan, rattachement au projet et synchronisation manuelle avec accès Microsoft Graph délégué.
+- Ticketing maison par CSV UTF-8. Aperçu, association des colonnes et des statuts, puis import répétable par projet et source.
+- Suivi filtrable dans la fiche projet. Retards et blocages dans le cockpit et le CODIR.
+- Recette tenant à effectuer avec un plan standard réel et un export de ticketing anonymisé.
+
+### Lots suivants
+
+- Synchronisation planifiée, après validation du suivi sur les données réelles.
+- Connecteur API du ticketing maison, après cadrage de son authentification, de son format et de sa pagination.
+- Création explicite d’une tâche Planner ou d’un ticket depuis un e-mail, avec choix de la destination avant confirmation.
+
 ## Phase Notion
 - Export notes/communications.
 - Import pages sélectionnées.

@@ -1,0 +1,26 @@
+{
+  "manifest_version": "0.3",
+  "name": "cio-assistant",
+  "display_name": "CIO Assistant",
+  "version": "1.0.0",
+  "description": "Consulter et tenir à jour le pilotage DSI depuis Claude Desktop.",
+  "author": { "name": "CIO Assistant" },
+  "server": {
+    "type": "node",
+    "entry_point": "server.cjs",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/server.cjs"],
+      "env": {
+        "CIO_URL": "${user_config.cio_url}",
+        "CIO_TOKEN": "${user_config.cio_token}",
+        "NODE_EXTRA_CA_CERTS": "${user_config.ca_file}"
+      }
+    }
+  },
+  "user_config": {
+    "cio_url": { "type": "string", "title": "URL HTTPS privée", "description": "Origine HTTPS de l’instance CIO Assistant.", "required": true },
+    "cio_token": { "type": "string", "title": "Jeton Claude", "description": "Jeton créé dans Paramètres → Intégrations → Claude.", "required": true, "sensitive": true },
+    "ca_file": { "type": "file", "title": "Autorité de certification interne", "description": "Certificat PEM de l’autorité interne si le serveur utilise une PKI d’entreprise.", "required": false }
+  }
+}

@@ -7,6 +7,7 @@ export const projectSchema = z.object({
   type: z.enum(PROJECT_TYPES),
   status: z.enum(PROJECT_STATUSES).default("DRAFT"),
   priority: z.enum(PRIORITIES).default("NORMAL"),
+  objectiveId: z.string().optional().nullable(),
   ownerId: z.string().optional().nullable(),
   startDate: z.string().datetime().optional().nullable(),
   targetDate: z.string().datetime().optional().nullable()

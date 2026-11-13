@@ -1,6 +1,8 @@
 # CIO Assistant
 
-Application web locale (MVP mono-utilisateur) pour piloter actions, projets, contrats, budget et communications templatisées avec une interface de type workbench, enrichie par un assistant conversationnel capable de comprendre le langage naturel, d'agir sur les modules métier et de traiter texte, documents et audio.
+[Déploiement Docker partagé, connexion Microsoft et Claude Desktop](docs/pilotage-partage.md)
+
+Application partagée pour piloter la DSI et répartir le suivi opérationnel. Le cockpit regroupe le portefeuille, les actions en retard ou bloquées, les risques et les arbitrages. La stratégie relie les objectifs aux projets. La vue Équipe répartit les actions ouvertes par responsable.
 
 ## Stack
 - Next.js App Router + TypeScript
@@ -123,7 +125,7 @@ docs/
 - `lib/services/ai-intake-service.ts`: planification sémantique, extraction par étape, exécution et fallback revue
 
 ## Assistant IA principal
-- La page principale est un assistant de type chat, utilisable en langage naturel.
+- La page `/assistant` propose un chat utilisable en langage naturel.
 - L'utilisateur peut lui demander de créer, modifier, compléter, classer ou relier des éléments métier dans `Actions`, `Projets`, `Prestataires`, `Contrats`, `Budget`, `Communications` et, à terme, `Réunions`.
 - La priorité d'usage doit rester le texte, qu'il soit:
   - saisi directement dans le chat
@@ -244,5 +246,20 @@ Pour lancer l'application localement dans Docker :
 docker compose up app
 ```
 
-`verify` exécute les tests, `prisma db push`, le lint et le build dans le conteneur.
-`app` initialise aussi le schéma Prisma SQLite dans le conteneur avant l'exécution.
+`verify` applique les migrations sur une base neuve et exécute les tests, le lint et la recette MCP dans le conteneur. L’image de production exécute `next start`. Pour un volume existant, suivre la [procédure d’adoption](docs/pilotage-partage.md).
+
+## Pilotage et Outlook
+
+Ouvre [Assistant DSI](http://localhost:3000) après `docker compose up -d --build app`. Le volume `app-data` conserve la base SQLite, les paramètres et la connexion Outlook quand le conteneur est recréé.
+
+1. Dans **Stratégie**, crée un objectif puis rattache les projets qui y contribuent.
+2. Dans **Équipe**, ajoute les responsables de projet. Les actions sont regroupées selon le nom saisi dans le champ Responsable.
+3. Dans **Paramètres → Intégrations**, active Outlook et renseigne le tenant, l’identifiant de l’application et le secret Microsoft Entra. Déclare `http://localhost:3000/api/integrations/outlook/callback` comme URI de redirection Web et accorde les permissions déléguées Microsoft Graph `User.Read` et `Mail.Read`. [Configuration Microsoft Entra](https://learn.microsoft.com/en-us/graph/auth-register-app-v2)
+4. Dans **E-mails**, clique sur **Connecter Outlook**, autorise le compte puis clique sur **Synchroniser**. Sélectionne un message pour l’associer à un projet, le lier à une action existante ou créer une action.
+
+### Planner et ticketing maison
+
+Dans **Paramètres → Intégrations Planner et ticketing**, rattache les sources à un projet. La fiche projet présente le suivi externe. Les alertes remontent dans le cockpit et le rapport CODIR.
+
+- **Planner** utilise les identifiants de l’application Microsoft Entra renseignés dans les paramètres Outlook, avec une autorisation et une session distinctes. Ajoute l’URI Web `http://localhost:3000/api/integrations/planner/callback` et les permissions déléguées `Tasks.Read` et `User.ReadBasic.All`. Connecte le compte, charge les plans standard, sélectionne un projet et synchronise. [Microsoft Graph Planner](https://learn.microsoft.com/en-us/graph/api/plannerplan-list-tasks?view=graph-rest-1.0)
+- **Ticketing** accepte un CSV UTF-8 avec en-tête et séparateur virgule, point-virgule ou tabulation. Associe les colonnes ID et titre, puis les champs facultatifs et les statuts souhaités. Les échéances acceptent `AAAA-MM-JJ`, `JJ/MM/AAAA` ou un horodatage ISO avec fuseau. Vérifie l’aperçu avant confirmation. Réutilise le même projet et le même nom de source pour actualiser les tickets existants. Les tickets absents d’un export sont conservés.

@@ -7,15 +7,17 @@ import { getBudgetItemById, listBudgetItems } from "@/lib/services/budget-item-s
 import type { BudgetItemFilters as BudgetItemFiltersInput } from "@/lib/validation/budget-item";
 
 type BudgetPageProps = {
-  searchParams?: {
+  searchParams?: Promise<{
     search?: string;
     category?: string;
     fiscalYear?: string;
     selectedId?: string;
-  };
+    new?: string;
+  }>;
 };
 
-export default async function BudgetPage({ searchParams }: BudgetPageProps) {
+export default async function BudgetPage({ searchParams: searchParamsPromise }: BudgetPageProps) {
+  const searchParams = await searchParamsPromise;
   const fiscalYear = searchParams?.fiscalYear ? Number(searchParams.fiscalYear) : undefined;
   const filters: BudgetItemFiltersInput = {
     search: searchParams?.search,
@@ -43,11 +45,15 @@ export default async function BudgetPage({ searchParams }: BudgetPageProps) {
   if (searchParams?.category) baseParams.set("category", searchParams.category);
   if (filters.fiscalYear) baseParams.set("fiscalYear", filters.fiscalYear.toString());
 
-  const buildSelectionHref = (selectedId?: string) => {
+  const panelOpen = Boolean(selectedBudgetItem || searchParams?.new === "1");
+
+  const buildSelectionHref = (selectedId?: string, create = false) => {
     const params = new URLSearchParams(baseParams);
 
     if (selectedId) {
       params.set("selectedId", selectedId);
+    } else if (create) {
+      params.set("new", "1");
     }
 
     const query = params.toString();
@@ -59,15 +65,10 @@ export default async function BudgetPage({ searchParams }: BudgetPageProps) {
       <div className="workbench-header">
         <div className="space-y-2">
           <h1 className="text-2xl font-semibold">Budget</h1>
-          <p className="text-sm text-slate-600">Compare les lignes budgétaires et ajuste-les dans le même flux de travail, sans rupture de contexte.</p>
           <div className="workbench-kpi-grid">
             <div className="workbench-kpi">
               <div className="workbench-kpi-label">Lignes</div>
               <div className="workbench-kpi-value">{budgetItems.length}</div>
-            </div>
-            <div className="workbench-kpi">
-              <div className="workbench-kpi-label">Sélection</div>
-              <div className="workbench-kpi-value">{selectedBudgetItem ? "1" : "0"}</div>
             </div>
             <div className="workbench-kpi">
               <div className="workbench-kpi-label">Écart</div>
@@ -75,14 +76,16 @@ export default async function BudgetPage({ searchParams }: BudgetPageProps) {
             </div>
           </div>
         </div>
-        {selectedBudgetItem && (
+        {panelOpen ? (
           <Link href={buildSelectionHref()} className="button-secondary">
-            Fermer le panneau
+            Fermer
           </Link>
+        ) : (
+          <Link href={buildSelectionHref(undefined, true)} className="button-primary">Nouvelle ligne</Link>
         )}
       </div>
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.7fr),460px]">
-        <section className="space-y-4">
+      <div className={panelOpen ? "workspace-split" : "space-y-4"}>
+        <section className="min-w-0 space-y-4">
           <BudgetItemFilters values={{ ...filters, fiscalYear: filters.fiscalYear?.toString() }} />
           <div className="workbench-table-shell">
             <table className="workbench-table">
@@ -129,20 +132,17 @@ export default async function BudgetPage({ searchParams }: BudgetPageProps) {
           </div>
         </section>
 
-        <aside className="space-y-4 xl:sticky xl:top-4 xl:self-start">
+        {panelOpen && <aside className="order-first min-w-0 space-y-4 xl:order-none">
           <section className="workbench-panel">
             <div className="mb-4 flex items-start justify-between gap-3">
               <div>
                 <h2 className="panel-title">
                   {selectedBudgetItem ? "Éditer la ligne" : "Nouvelle ligne budgétaire"}
                 </h2>
-                <p className="panel-caption">
-                  {selectedBudgetItem ? "Les montants et rattachements de la ligne sélectionnée sont modifiables ici." : "Crée ou modifie une ligne depuis ce panneau unique."}
-                </p>
               </div>
               {selectedBudgetItem && <BudgetItemDeleteButton budgetItemId={selectedBudgetItem.id} />}
             </div>
-            <BudgetItemForm
+            <BudgetItemForm key={selectedBudgetItem?.id ?? "new"}
               mode={selectedBudgetItem ? "edit" : "create"}
               budgetItemId={selectedBudgetItem?.id}
               projectOptions={projectOptions}
@@ -176,7 +176,7 @@ export default async function BudgetPage({ searchParams }: BudgetPageProps) {
               <p><strong>Écart prévu/réel:</strong> {variance ?? "—"}</p>
             </section>
           )}
-        </aside>
+        </aside>}
       </div>
     </div>
   );

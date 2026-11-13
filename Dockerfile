@@ -1,29 +1,14 @@
-FROM node:20-trixie-slim
-
+FROM node:24-trixie-slim
 WORKDIR /app
-
-COPY package.json ./
+RUN apt-get update && apt-get install -y --no-install-recommends openssl libgomp1 libvulkan1 sqlite3 python3 ca-certificates zip && rm -rf /var/lib/apt/lists/*
+COPY package.json package-lock.json ./
 COPY prisma ./prisma
-
-RUN apt-get update && apt-get install -y openssl libgomp1 libvulkan1 && rm -rf /var/lib/apt/lists/*
-
-RUN npm install
-RUN if [ -d /app/node_modules/@kutalia/whisper-node-addon/dist/linux-x64 ]; then \
-      cp /app/node_modules/@kutalia/whisper-node-addon/dist/linux-x64/lib*.so* /usr/lib/x86_64-linux-gnu/ && ldconfig; \
-    fi
-RUN if [ -d /app/node_modules/@kutalia/whisper-node-addon/dist/linux-arm64 ]; then \
-      cp /app/node_modules/@kutalia/whisper-node-addon/dist/linux-arm64/lib*.so* /usr/lib/aarch64-linux-gnu/ && ldconfig; \
-    fi
-
+RUN npm ci
+RUN arch="$(dpkg --print-architecture)" && \
+    case "$arch" in amd64) addon_arch=x64; system_arch=x86_64;; arm64) addon_arch=arm64; system_arch=aarch64;; esac && \
+    cp node_modules/@kutalia/whisper-node-addon/dist/linux-"$addon_arch"/lib*.so* /usr/lib/"$system_arch"-linux-gnu/ && ldconfig
 COPY . .
-
-ENV DATABASE_URL=file:./prisma/dev.db
-ENV AI_PROVIDER_MODE=local
-ENV AI_MODEL=heuristic-v1
-ENV OPENAI_MODEL=
-ENV AI_COMPATIBLE_BASE_URL=
-ENV AI_COMPATIBLE_MODEL=
-
-RUN npx prisma generate
-
-CMD ["npm", "run", "dev"]
+ENV DATABASE_URL=file:/app/.data/cioassistant.db AI_PROVIDER_MODE=local AI_MODEL=heuristic-v1 NEXT_TELEMETRY_DISABLED=1
+RUN npm run prisma:generate && npm run build
+RUN sh scripts/package-mcp.sh
+CMD ["sh", "-ec", "node scripts/database.mjs check && ./node_modules/.bin/prisma migrate deploy && exec npm start"]

@@ -2,7 +2,7 @@ import { COMMUNICATION_STATUSES } from "@/lib/domain/constants";
 import { COMMUNICATION_TEMPLATE_KEYS } from "@/lib/communications/templates";
 import { z } from "zod";
 
-const communicationBaseSchema = z.object({
+export const communicationBaseSchema = z.object({
   title: z.string(),
   type: z.string().optional().nullable(),
   status: z.enum(COMMUNICATION_STATUSES).default("DRAFT"),

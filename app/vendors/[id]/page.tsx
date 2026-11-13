@@ -4,7 +4,8 @@ import { VendorForm } from "@/components/vendors/vendor-form";
 import { getVendorById } from "@/lib/services/vendor-service";
 import { notFound } from "next/navigation";
 
-export default async function VendorDetailPage({ params }: { params: { id: string } }) {
+export default async function VendorDetailPage({ params: paramsPromise }: { params: Promise<{ id: string }> }) {
+  const params = await paramsPromise;
   const vendor = await getVendorById(params.id);
 
   if (!vendor) return notFound();

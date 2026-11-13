@@ -1,3 +1,5 @@
+import { projectTypeLabels, projectLabels, priorityLabels } from "@/lib/domain/display-labels";
+import Link from "next/link";
 import { PRIORITIES, PROJECT_STATUSES, PROJECT_TYPES } from "@/lib/domain/constants";
 
 type ProjectFiltersProps = {
@@ -11,40 +13,35 @@ type ProjectFiltersProps = {
 
 export function ProjectFilters({ values }: ProjectFiltersProps) {
   return (
-    <form className="workbench-toolbar">
+    <form action="/projects" className="workspace-list-filters">
       <input
         type="search"
         name="search"
         defaultValue={values.search ?? ""}
-        placeholder="Recherche"
-        className="field-input md:col-span-2"
+        aria-label="Rechercher"
+        placeholder="Rechercher…"
+        className="field-input workspace-list-search"
       />
-      <select name="type" defaultValue={values.type ?? ""} className="field-select">
+      <select aria-label="Type" name="type" defaultValue={values.type ?? ""} className="field-select">
         <option value="">Tous les types</option>
         {PROJECT_TYPES.map((item) => (
-          <option key={item} value={item}>{item}</option>
+          <option key={item} value={item}>{projectTypeLabels[item]}</option>
         ))}
       </select>
-      <select name="status" defaultValue={values.status ?? ""} className="field-select">
+      <select aria-label="Statut" name="status" defaultValue={values.status ?? ""} className="field-select">
         <option value="">Tous les statuts</option>
         {PROJECT_STATUSES.map((item) => (
-          <option key={item} value={item}>{item}</option>
+          <option key={item} value={item}>{projectLabels[item]}</option>
         ))}
       </select>
-      <select name="priority" defaultValue={values.priority ?? ""} className="field-select">
+      <select aria-label="Priorité" name="priority" defaultValue={values.priority ?? ""} className="field-select">
         <option value="">Toutes les priorités</option>
         {PRIORITIES.map((item) => (
-          <option key={item} value={item}>{item}</option>
+          <option key={item} value={item}>{priorityLabels[item]}</option>
         ))}
       </select>
-      <div className="flex gap-2 md:col-span-4">
-        <button type="submit" className="button-primary">
-          Filtrer
-        </button>
-        <a href="/projects" className="button-secondary">
-          Réinitialiser
-        </a>
-      </div>
+      <button type="submit" className="button-secondary">Filtrer</button>
+      {(values.search || values.type || values.status || values.priority) && <Link href="/projects" className="workspace-panel-link">Réinitialiser</Link>}
     </form>
   );
 }

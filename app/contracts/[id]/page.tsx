@@ -10,7 +10,8 @@ function formatDate(value: Date | null) {
   return value ? new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium", timeStyle: "short" }).format(value) : "—";
 }
 
-export default async function ContractDetailPage({ params }: { params: { id: string } }) {
+export default async function ContractDetailPage({ params: paramsPromise }: { params: Promise<{ id: string }> }) {
+  const params = await paramsPromise;
   const [contract, vendors, projects] = await Promise.all([
     getContractById(params.id),
     prisma.vendor.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),

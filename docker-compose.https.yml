@@ -1,0 +1,15 @@
+services:
+  app:
+    environment:
+      CIO_PUBLIC_URL: https://${CIO_PRIVATE_HOST:?Nom DNS privé requis}
+  https:
+    image: nginx:alpine
+    ports:
+      - "${CIO_PRIVATE_IP:?Adresse IP privée du serveur requise}:443:443"
+    environment:
+      CIO_PRIVATE_HOST: ${CIO_PRIVATE_HOST}
+    volumes:
+      - ./deploy/cio.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - ${CIO_TLS_DIRECTORY:?Dossier de certificats requis}:/etc/cio/tls:ro
+    depends_on:
+      - app

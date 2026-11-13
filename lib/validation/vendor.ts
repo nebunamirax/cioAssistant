@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const vendorBaseSchema = z.object({
+export const vendorBaseSchema = z.object({
   name: z.string().min(2),
   category: z.string().optional().nullable(),
   mainContactName: z.string().optional().nullable(),

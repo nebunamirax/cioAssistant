@@ -1,3 +1,4 @@
+import { currentMember } from "@/lib/auth/session";
 import { NextResponse } from "next/server";
 import { ACTION_STATUSES, PRIORITIES } from "@/lib/domain/constants";
 import { createAction, listActions } from "@/lib/services/action-service";
@@ -21,6 +22,9 @@ export async function GET(request: Request) {
       search: searchParams.get("search") ?? undefined,
       status: parseEnumParam(ACTION_STATUSES, searchParams.get("status")),
       priority: parseEnumParam(PRIORITIES, searchParams.get("priority")),
+      projectId: searchParams.get("projectId") || undefined,
+      unassigned: parseBooleanParam(searchParams.get("unassigned")),
+      openOnly: parseBooleanParam(searchParams.get("openOnly")),
       overdueOnly: parseBooleanParam(searchParams.get("overdueOnly"))
     });
     return NextResponse.json({ data });
@@ -31,8 +35,10 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const actor = await currentMember();
+    if (!actor) return new Response(null, { status: 401 });
     const payload = await request.json();
-    const data = await createAction(payload);
+    const data = await createAction(payload, undefined, actor);
     return NextResponse.json({ data }, { status: 201 });
   } catch (error) {
     return NextResponse.json({ error: (error as Error).message }, { status: 400 });

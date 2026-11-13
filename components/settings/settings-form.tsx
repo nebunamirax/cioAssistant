@@ -251,7 +251,7 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
           <p className="panel-caption">Même menu, mêmes règles: Outlook et Notion se configurent ici.</p>
         </div>
 
-        <div className="form-section space-y-3">
+        <div id="outlook-settings" className="form-section space-y-3">
           <div className="flex items-center justify-between gap-3">
             <div>
               <h3 className="form-section-title">Outlook</h3>
@@ -349,7 +349,7 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
             </label>
           </div>
           <p className="text-xs text-slate-500">
-            L'automatisation traite les emails dont la categorie Outlook correspond, puis cree des objets metier ou envoie en revue IA.
+            L&apos;automatisation traite les emails dont la categorie Outlook correspond, puis cree des objets metier ou envoie en revue IA.
           </p>
           {testResults.outlook ? (
             <div className="rounded-2xl border border-slate-200 bg-white p-3">

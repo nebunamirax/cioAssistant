@@ -2,12 +2,13 @@ import { NextResponse } from "next/server";
 import { deleteMeetingNote, getMeetingNoteById, updateMeetingNote } from "@/lib/services/meeting-note-service";
 
 type RouteContext = {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 };
 
-export async function GET(_: Request, { params }: RouteContext) {
+export async function GET(_: Request, { params: paramsPromise }: RouteContext) {
+  const params = await paramsPromise;
   const data = await getMeetingNoteById(params.id);
 
   if (!data) {
@@ -17,7 +18,8 @@ export async function GET(_: Request, { params }: RouteContext) {
   return NextResponse.json({ data });
 }
 
-export async function PATCH(request: Request, { params }: RouteContext) {
+export async function PATCH(request: Request, { params: paramsPromise }: RouteContext) {
+  const params = await paramsPromise;
   try {
     const payload = await request.json();
     const data = await updateMeetingNote(params.id, payload);
@@ -27,7 +29,8 @@ export async function PATCH(request: Request, { params }: RouteContext) {
   }
 }
 
-export async function DELETE(_: Request, { params }: RouteContext) {
+export async function DELETE(_: Request, { params: paramsPromise }: RouteContext) {
+  const params = await paramsPromise;
   try {
     await deleteMeetingNote(params.id);
     return NextResponse.json({ ok: true });

@@ -9,7 +9,8 @@ function formatNumber(value: number | null) {
   return value === null ? "—" : value.toString();
 }
 
-export default async function BudgetItemDetailPage({ params }: { params: { id: string } }) {
+export default async function BudgetItemDetailPage({ params: paramsPromise }: { params: Promise<{ id: string }> }) {
+  const params = await paramsPromise;
   const [budgetItem, projects, contracts, vendors] = await Promise.all([
     getBudgetItemById(params.id),
     prisma.project.findMany({ orderBy: { title: "asc" }, select: { id: true, title: true } }),

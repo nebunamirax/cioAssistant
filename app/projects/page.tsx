@@ -1,4 +1,7 @@
 import Link from "next/link";
+import { projectTypeLabels, priorityLabels } from "@/lib/domain/display-labels";
+import { prisma } from "@/lib/db/prisma";
+import { pilotageDate, projectLabels } from "@/lib/services/pilotage-service";
 import { ProjectDeleteButton } from "@/components/projects/project-delete-button";
 import { ProjectFilters } from "@/components/projects/project-filters";
 import { ProjectForm } from "@/components/projects/project-form";
@@ -7,13 +10,14 @@ import { getProjectById, listProjects } from "@/lib/services/project-service";
 import type { ProjectFilters as ProjectFiltersInput } from "@/lib/validation/project";
 
 type ProjectsPageProps = {
-  searchParams?: {
+  searchParams?: Promise<{
     search?: string;
     type?: string;
     status?: string;
     priority?: string;
     selectedId?: string;
-  };
+    new?: string;
+  }>;
 };
 
 type ProjectTypeValue = NonNullable<ProjectFiltersInput["type"]>;
@@ -32,32 +36,41 @@ function isPriority(value: string): value is ProjectPriorityValue {
   return PRIORITIES.includes(value as (typeof PRIORITIES)[number]);
 }
 
-export default async function ProjectsPage({ searchParams }: ProjectsPageProps) {
+export default async function ProjectsPage({ searchParams: searchParamsPromise }: ProjectsPageProps) {
+  const searchParams = await searchParamsPromise;
   const type: ProjectFiltersInput["type"] = searchParams?.type && isProjectType(searchParams.type) ? searchParams.type : undefined;
   const status: ProjectFiltersInput["status"] = searchParams?.status && isProjectStatus(searchParams.status) ? searchParams.status : undefined;
   const priority: ProjectFiltersInput["priority"] = searchParams?.priority && isPriority(searchParams.priority) ? searchParams.priority : undefined;
+  const search = typeof searchParams?.search === "string" ? searchParams.search : undefined;
+  const selectedId = typeof searchParams?.selectedId === "string" ? searchParams.selectedId : undefined;
   const filters: ProjectFiltersInput = {
-    search: searchParams?.search,
+    search,
     type,
     status,
     priority
   };
-  const [projects, selectedProject] = await Promise.all([
+  const [projects, selectedProject, owners] = await Promise.all([
     listProjects(filters),
-    searchParams?.selectedId ? getProjectById(searchParams.selectedId) : null
+    selectedId ? getProjectById(selectedId) : null,
+    prisma.user.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } })
   ]);
+  const ownerNames = new Map(owners.map((owner) => [owner.id, owner.name]));
   const baseParams = new URLSearchParams();
 
-  if (searchParams?.search) baseParams.set("search", searchParams.search);
+  if (search) baseParams.set("search", search);
   if (type) baseParams.set("type", type);
   if (status) baseParams.set("status", status);
   if (priority) baseParams.set("priority", priority);
 
-  const buildSelectionHref = (selectedId?: string) => {
+  const panelOpen = Boolean(selectedProject || searchParams?.new === "1");
+
+  const buildSelectionHref = (selectedId?: string, create = false) => {
     const params = new URLSearchParams(baseParams);
 
     if (selectedId) {
       params.set("selectedId", selectedId);
+    } else if (create) {
+      params.set("new", "1");
     }
 
     const query = params.toString();
@@ -68,34 +81,35 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
     <div className="space-y-4">
       <div className="workbench-header">
         <div className="space-y-2">
-          <h1 className="text-2xl font-semibold">Projets</h1>
-          <p className="text-sm text-slate-600">Orchestre le portefeuille projet dans un poste de pilotage unique, sans navigation en cascade.</p>
-          <div className="workbench-kpi-grid">
-            <div className="workbench-kpi">
-              <div className="workbench-kpi-label">Portefeuille</div>
-              <div className="workbench-kpi-value">{projects.length}</div>
-            </div>
-            <div className="workbench-kpi">
-              <div className="workbench-kpi-label">Priorité haute</div>
-              <div className="workbench-kpi-value">{projects.filter((project) => project.priority === "HIGH" || project.priority === "CRITICAL").length}</div>
-            </div>
-            <div className="workbench-kpi">
-              <div className="workbench-kpi-label">Sélection</div>
-              <div className="workbench-kpi-value">{selectedProject ? "1" : "0"}</div>
-            </div>
-          </div>
+          <h1 className="workspace-page-title">Projets</h1>
+          <p className="text-sm text-slate-600">{projects.length} {projects.length === 1 ? "projet affiché" : "projets affichés"}</p>
         </div>
-        {selectedProject && (
+        {panelOpen ? (
           <Link href={buildSelectionHref()} className="button-secondary">
-            Fermer le panneau
+            Fermer
           </Link>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            <Link href="/roadmap" className="button-secondary">Voir la roadmap</Link>
+            <Link href={buildSelectionHref(undefined, true)} className="button-primary">Nouveau projet</Link>
+          </div>
         )}
       </div>
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.7fr),440px]">
-        <section className="space-y-4">
-          <ProjectFilters values={filters} />
+      <div className={panelOpen ? "workspace-split" : "space-y-4"}>
+        <section className="min-w-0 space-y-4">
+          <ProjectFilters key={baseParams.toString()} values={filters} />
           <div className="workbench-table-shell">
-            <table className="workbench-table">
+            <ul className="workspace-feed border-t-0 sm:hidden" aria-label="Projets">
+              {projects.map((project) => <li key={project.id} className="workspace-feed-row">
+                <Link href={`/projects/${encodeURIComponent(project.id)}`} className="workspace-feed-text">
+                  <strong>{project.title}</strong>
+                  <span>{[projectLabels[project.status] ?? project.status, project.targetDate && pilotageDate(project.targetDate)].filter(Boolean).join(" · ")}</span>
+                </Link>
+                <Link href={buildSelectionHref(project.id)} className="workspace-panel-link" aria-label={`Modifier ${project.title}`}>Modifier</Link>
+              </li>)}
+              {!projects.length && <li className="workspace-empty">Aucun projet.</li>}
+            </ul>
+            <table className="workbench-table hidden sm:table">
               <thead>
                 <tr>
                   <th>Titre</th>
@@ -103,22 +117,24 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
                   <th>Statut</th>
                   <th>Priorité</th>
                   <th>Cible</th>
+                  <th>Responsable</th>
                   <th>Actions</th>
                   <th>Modifier</th>
                 </tr>
               </thead>
               <tbody>
                 {projects.map((project) => (
-                  <tr key={project.id} data-selected={searchParams?.selectedId === project.id}>
+                  <tr key={project.id} data-selected={selectedId === project.id}>
                     <td>
-                      <Link href={buildSelectionHref(project.id)} className="font-medium text-slate-900 hover:underline">
+                      <Link href={`/projects/${project.id}`} className="pilot-row-link">
                         {project.title}
                       </Link>
                     </td>
-                    <td>{project.type}</td>
-                    <td>{project.status}</td>
-                    <td>{project.priority}</td>
-                    <td>{project.targetDate ? new Intl.DateTimeFormat("fr-FR").format(project.targetDate) : "—"}</td>
+                    <td>{projectTypeLabels[project.type] ?? project.type}</td>
+                    <td><span className="pilot-status" data-status={project.status}>{projectLabels[project.status] ?? project.status}</span></td>
+                    <td>{priorityLabels[project.priority] ?? project.priority}</td>
+                    <td>{pilotageDate(project.targetDate)}</td>
+                    <td>{(project.ownerId && ownerNames.get(project.ownerId)) || "À attribuer"}</td>
                     <td>{project._count.actions}</td>
                     <td>
                       <Link href={buildSelectionHref(project.id)} className="text-slate-900 hover:underline">
@@ -129,7 +145,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
                 ))}
                 {projects.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="text-slate-500">
+                    <td colSpan={8} className="text-slate-500">
                       Aucun projet.
                     </td>
                   </tr>
@@ -139,24 +155,22 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
           </div>
         </section>
 
-        <aside className="space-y-4 xl:sticky xl:top-4 xl:self-start">
+        {panelOpen && <aside className="order-first min-w-0 space-y-4 xl:order-none">
           <section className="workbench-panel">
             <div className="mb-4 flex items-start justify-between gap-3">
               <div>
                 <h2 className="panel-title">
-                  {selectedProject ? "Éditer le projet" : "Nouveau projet"}
+                  {selectedProject ? "Modifier le projet" : "Nouveau projet"}
                 </h2>
-                <p className="panel-caption">
-                  {selectedProject ? "Le formulaire reprend les données actuelles du projet sélectionné." : "Choisis un projet dans la liste ou crée-en un nouveau."}
-                </p>
               </div>
               {selectedProject && <ProjectDeleteButton projectId={selectedProject.id} />}
             </div>
-            <ProjectForm
+            <ProjectForm key={selectedProject?.id ?? "new"} owners={owners}
               mode={selectedProject ? "edit" : "create"}
               projectId={selectedProject?.id}
               initialValues={selectedProject ? {
                 title: selectedProject.title,
+                ownerId: selectedProject.ownerId,
                 description: selectedProject.description ?? "",
                 type: PROJECT_TYPES.includes(selectedProject.type as (typeof PROJECT_TYPES)[number]) ? (selectedProject.type as (typeof PROJECT_TYPES)[number]) : "DEVELOPMENT",
                 status: PROJECT_STATUSES.includes(selectedProject.status as (typeof PROJECT_STATUSES)[number]) ? (selectedProject.status as (typeof PROJECT_STATUSES)[number]) : "DRAFT",
@@ -194,7 +208,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
               </section>
             </>
           )}
-        </aside>
+        </aside>}
       </div>
     </div>
   );

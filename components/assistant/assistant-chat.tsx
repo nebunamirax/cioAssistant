@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useRef, useState } from "react";
+import { useRef, useState } from "react";
 
 type ProviderInfo = {
   provider: string;
@@ -70,21 +70,6 @@ type AssistantApiResponse = {
   }>;
 };
 
-function InfoDot({ label }: { label: string }) {
-  return (
-    <span className="info-dot" title={label} aria-label={label}>
-      i
-    </span>
-  );
-}
-
-const welcomeMessage: ChatMessage = {
-  id: "assistant-welcome",
-  role: "assistant",
-  text: "Decris une demande libre ou ajoute un document. Je te retourne ce qui a ete compris, ce qui est cree et ce qui part en revue manuelle.",
-  status: "created"
-};
-
 function createMessageId() {
   if (typeof globalThis.crypto !== "undefined" && typeof globalThis.crypto.randomUUID === "function") {
     return globalThis.crypto.randomUUID();
@@ -107,14 +92,14 @@ function operationTone(status: AssistantOperation["status"]) {
 
 function statusLabel(status: AssistantOperation["status"] | NonNullable<ChatMessage["status"]>) {
   if (status === "created") {
-    return "created";
+    return "Créé";
   }
 
   if (status === "review") {
-    return "review";
+    return "À valider";
   }
 
-  return "processing";
+  return "En cours";
 }
 
 function messageStatusLabel(message: ChatMessage) {
@@ -127,11 +112,11 @@ function messageStatusLabel(message: ChatMessage) {
   }
 
   if (message.status === "created") {
-    return "Creee";
+    return "Terminé";
   }
 
   if (message.status === "review") {
-    return "En revue";
+    return "À valider";
   }
 
   return "";
@@ -228,23 +213,20 @@ function AssistantComposer({
       }}
     >
       <div className="space-y-2">
-        <div className="flex items-center justify-between gap-2">
-          <label className="field-label !mb-0">Message</label>
-          <span className="rounded-full bg-white/70 px-2.5 py-1 text-[11px] font-medium text-slate-600">
-            Texte ou document
-          </span>
-        </div>
+        <label className="field-label" htmlFor="assistant-message">Message</label>
         <textarea
+          id="assistant-message"
           value={text}
           onChange={(event) => setText(event.target.value)}
-          className="field-textarea min-h-[168px] border-0 bg-white/95"
-          placeholder="Exemple: cree le projet migration SSO, ajoute trois actions de suivi et lie-les au fournisseur Okta..."
+          className="field-textarea min-h-[132px]"
+          placeholder="Ex. Crée le projet Migration SSO et ajoute une action pour préparer le pilote."
         />
       </div>
       <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
         <div>
-          <label className="field-label">Document</label>
+          <label className="field-label" htmlFor="assistant-document">Pièce jointe</label>
           <input
+            id="assistant-document"
             ref={fileInputRef}
             type="file"
             accept=".txt,.md,.markdown,.csv,.json,.eml,.pdf,.docx,text/plain,text/markdown,message/rfc822,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
@@ -252,10 +234,10 @@ function AssistantComposer({
             onChange={(event) => setFileName(event.target.files?.[0]?.name ?? null)}
           />
           <p className="field-hint">
-            {fileName ? `Pret a envoyer: ${fileName}` : "Formats supportes: txt, md, csv, json, eml, pdf, docx."}
+            {fileName ? `Prêt à envoyer · ${fileName}` : "Formats acceptés · txt, md, csv, json, eml, pdf, docx."}
           </p>
         </div>
-        <button disabled={busy} className="button-primary min-w-[140px]">
+        <button disabled={busy || (!text.trim() && !fileName)} className="button-primary min-w-[140px]">
           {busy ? "Analyse en cours..." : "Envoyer"}
         </button>
       </div>
@@ -264,14 +246,11 @@ function AssistantComposer({
 }
 
 export function AssistantChat() {
-  const [messages, setMessages] = useState<ChatMessage[]>([welcomeMessage]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const transcriptCount = useMemo(
-    () => messages.filter((message) => message.role === "assistant" && message.status === "created").length - 1,
-    [messages]
-  );
+
 
   const submit = async ({ file, text }: { text: string; file: File | null }) => {
     const trimmedText = text.trim();
@@ -319,7 +298,7 @@ export function AssistantChat() {
 
       if (!response.ok) {
         setMessages((current) => current.filter((message) => message.id !== processingMessageId));
-        setError(payload.error ?? "Le message assistant a echoue.");
+        setError(payload.error ?? "Impossible d’envoyer le message. Réessayez.");
         setBusy(false);
         return false;
       }
@@ -341,105 +320,24 @@ export function AssistantChat() {
       return true;
     } catch {
       setMessages((current) => current.filter((message) => message.id !== processingMessageId));
-      setError("Le message assistant a echoue.");
+      setError("Impossible d’envoyer le message. Réessayez.");
       setBusy(false);
       return false;
     }
   };
 
   return (
-    <section className="assistant-shell">
-      <section className="workbench-panel space-y-4">
-        <div className="space-y-3 border-b border-slate-200 pb-4">
-          <div className="space-y-1.5">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">Assistant principal</p>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-semibold text-slate-950 sm:text-2xl">Que veux-tu faire ?</h1>
-              <InfoDot label="Decris une demande ou joins un document. L'assistant propose ensuite creations ou revue." />
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <div className="rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">Messages</p>
-              <p className="mt-1 text-base font-semibold text-slate-950">{Math.max(messages.length - 1, 0)}</p>
-            </div>
-            <div className="rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">Created</p>
-              <p className="mt-1 text-base font-semibold text-slate-950">{Math.max(transcriptCount, 0)}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <section className="rounded-[22px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(248,250,252,0.95),rgba(255,255,255,1))] p-3 shadow-sm sm:p-4">
-            <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-              <div className="flex items-center gap-2">
-                <h2 className="text-base font-semibold text-slate-950">Envoyer une demande</h2>
-                <InfoDot label="Accepte texte libre, PDF, DOCX et autres documents supportes." />
-              </div>
-              <div className="flex flex-wrap gap-2 text-xs text-slate-500">
-                <span className="rounded-full bg-white px-2.5 py-1">Texte libre</span>
-                <span className="rounded-full bg-white px-2.5 py-1">PDF</span>
-                <span className="rounded-full bg-white px-2.5 py-1">DOCX</span>
-              </div>
-            </div>
-            <AssistantComposer busy={busy} onSubmit={submit} />
-            {error ? <p className="mt-3 text-sm text-red-600">{error}</p> : null}
-          </section>
-
-          <div className="grid gap-4 xl:grid-cols-[minmax(0,1.3fr),320px]">
-            <section className="rounded-[20px] border border-slate-200/80 bg-slate-50/50 p-3 sm:p-4">
-              <div className="mb-3 flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <h2 className="text-sm font-semibold text-slate-950">Conversation</h2>
-                  <InfoDot label="Historique du fil courant avec resume et operations detectees." />
-                </div>
-                <span className="rounded-full bg-white px-2.5 py-1 text-xs text-slate-500">Flux principal</span>
-              </div>
-              <AssistantMessageList messages={messages} />
-            </section>
-
-            <section className="rounded-[20px] border border-slate-200/80 bg-white p-3 sm:p-4">
-              <div className="flex items-center gap-2">
-                <h2 className="text-sm font-semibold text-slate-950">Retours possibles</h2>
-                <InfoDot label="Trois cas principaux: analyse, creation directe ou revue manuelle." />
-              </div>
-              <div className="mt-3 space-y-3">
-                <AssistantOperationResult
-                  operation={{
-                    id: "sample-processing",
-                    module: "assistant",
-                    title: "Analyse en cours",
-                    status: "processing",
-                    href: null,
-                    description: "Le modele route le contenu et prepare les operations."
-                  }}
-                />
-                <AssistantOperationResult
-                  operation={{
-                    id: "sample-created",
-                    module: "projects",
-                    title: "Creation terminee",
-                    status: "created",
-                    href: null,
-                    description: "Les entrees creees restent visibles ici avec leurs liens."
-                  }}
-                />
-                <AssistantOperationResult
-                  operation={{
-                    id: "sample-review",
-                    module: "contracts",
-                    title: "Revue manuelle",
-                    status: "review",
-                    href: "/ai-reviews",
-                    description: "Les cas ambigus sont rediriges vers la file de revue."
-                  }}
-                />
-              </div>
-            </section>
-          </div>
-        </div>
+    <div className="space-y-4">
+      <section>
+        <AssistantComposer busy={busy} onSubmit={submit} />
+        {error && <p role="alert" className="mt-3 text-sm text-red-700">{error}</p>}
       </section>
-    </section>
+      {messages.length > 0 && (
+        <section className="workbench-panel space-y-3">
+          <h2 className="panel-title">Conversation</h2>
+          <AssistantMessageList messages={messages} />
+        </section>
+      )}
+    </div>
   );
 }

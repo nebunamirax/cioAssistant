@@ -6,10 +6,10 @@ import { getAIIntakeReviewById, listAIIntakeReviews } from "@/lib/services/ai-in
 type AIReviewListItem = Awaited<ReturnType<typeof listAIIntakeReviews>>[number];
 
 type AIReviewsPageProps = {
-  searchParams?: {
+  searchParams?: Promise<{
     selectedId?: string;
     status?: string;
-  };
+  }>;
 };
 
 function getReviewStatusPresentation(review: AIReviewListItem) {
@@ -48,7 +48,8 @@ function getReviewStatusPresentation(review: AIReviewListItem) {
   };
 }
 
-export default async function AIReviewsPage({ searchParams }: AIReviewsPageProps) {
+export default async function AIReviewsPage({ searchParams: searchParamsPromise }: AIReviewsPageProps) {
+  const searchParams = await searchParamsPromise;
   const status = searchParams?.status === "APPROVED" || searchParams?.status === "REJECTED" || searchParams?.status === "PENDING"
     ? searchParams.status
     : undefined;
@@ -82,11 +83,11 @@ export default async function AIReviewsPage({ searchParams }: AIReviewsPageProps
     <div className="space-y-4">
       <div className="workbench-header">
         <div className="space-y-2">
-          <h1 className="text-2xl font-semibold">Revue IA</h1>
-          <p className="text-sm text-slate-600">Traite les demandes que l’IA n’a pas pu ranger proprement. Choisis le module, complète les champs, puis valide la création.</p>
+          <h1 className="text-2xl font-semibold">Suggestions à valider</h1>
+
           <div className="workbench-kpi-grid">
             <div className="workbench-kpi">
-              <div className="workbench-kpi-label">A traiter</div>
+              <div className="workbench-kpi-label">À traiter</div>
               <div className="workbench-kpi-value">{pendingCount}</div>
             </div>
             <div className="workbench-kpi">
@@ -169,11 +170,6 @@ export default async function AIReviewsPage({ searchParams }: AIReviewsPageProps
           <section className="workbench-panel">
             <div className="mb-4">
               <h2 className="panel-title">{activeReview ? "Traiter la demande" : "Sélectionne une demande"}</h2>
-              <p className="panel-caption">
-                {activeReview
-                  ? "Complète le brouillon ci-dessous puis valide la création."
-                  : "La colonne de droite sert à catégoriser et valider les demandes non reconnues automatiquement."}
-              </p>
             </div>
             {activeReview ? (
               <ReviewEditor review={activeReview} />

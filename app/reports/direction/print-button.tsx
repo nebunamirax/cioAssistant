@@ -1,0 +1,5 @@
+"use client";
+
+export function PrintButton() {
+  return <button className="button-secondary" onClick={() => window.print()}>Imprimer</button>;
+}

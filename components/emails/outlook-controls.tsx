@@ -1,9 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 type OutlookControlsProps = {
+  enabled: boolean;
   configured: boolean;
   connected: boolean;
   accountEmail?: string | null;
@@ -14,142 +16,59 @@ type OutlookControlsProps = {
   automationCategory: string;
 };
 
-function formatDateTime(value?: string | null) {
-  if (!value) {
-    return "Jamais";
-  }
-
-  return new Intl.DateTimeFormat("fr-FR", {
-    dateStyle: "medium",
-    timeStyle: "short"
-  }).format(new Date(value));
-}
-
-export function OutlookControls({
-  configured,
-  connected,
-  accountEmail,
-  lastSyncedAt,
-  pollingEnabled,
-  pollingIntervalMinutes,
-  automationEnabled,
-  automationCategory
-}: OutlookControlsProps) {
+export function OutlookControls(props: OutlookControlsProps) {
   const router = useRouter();
   const [loading, setLoading] = useState<"sync" | "disconnect" | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const callbackUrl = useMemo(() => {
-    if (typeof window === "undefined") {
-      return "/api/integrations/outlook/callback";
-    }
+  const [feedback, setFeedback] = useState<{ text: string; error?: boolean } | null>(null);
+  const [callbackUrl, setCallbackUrl] = useState("");
+  useEffect(() => setCallbackUrl(`${window.location.origin}/api/integrations/outlook/callback`), []);
 
-    return `${window.location.origin}/api/integrations/outlook/callback`;
-  }, []);
-
-  const sync = async () => {
-    setLoading("sync");
-    setError(null);
-
-    const response = await fetch("/api/integrations/outlook", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ action: "sync" })
-    });
-    const payload = await response.json();
-
-    if (!response.ok) {
-      setError(payload.error ?? "Impossible de synchroniser Outlook.");
+  async function changeConnection(action: "sync" | "disconnect") {
+    setLoading(action);
+    setFeedback(null);
+    try {
+      const response = await fetch("/api/integrations/outlook", action === "sync" ? {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "sync" })
+      } : { method: "DELETE" });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error ?? "L’opération Outlook a échoué.");
+      setFeedback({ text: action === "sync" ? `${payload.data.syncedCount} e-mails lus lors de la synchronisation.` : "Compte Outlook déconnecté." });
+      router.refresh();
+    } catch (error) {
+      setFeedback({ text: error instanceof Error ? error.message : "L’opération Outlook a échoué.", error: true });
+    } finally {
       setLoading(null);
-      return;
     }
+  }
 
-    setLoading(null);
-    router.refresh();
-  };
-
-  const disconnect = async () => {
-    setLoading("disconnect");
-    setError(null);
-
-    const response = await fetch("/api/integrations/outlook", {
-      method: "DELETE"
-    });
-    const payload = await response.json();
-
-    if (!response.ok) {
-      setError(payload.error ?? "Impossible de deconnecter Outlook.");
-      setLoading(null);
-      return;
-    }
-
-    setLoading(null);
-    router.refresh();
-  };
+  const lastSync = props.lastSyncedAt ? new Intl.DateTimeFormat("fr-FR", { dateStyle: "short", timeStyle: "short", timeZone: "Europe/Paris" }).format(new Date(props.lastSyncedAt)) : "Jamais";
 
   return (
-    <section className="workbench-panel space-y-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <section className="workbench-panel space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="panel-title">Microsoft 365</h2>
-          <p className="panel-caption">Connexion Outlook deleguee, lecture Inbox et synchro manuelle via Microsoft Graph.</p>
+          <h2 className="panel-title">Microsoft 365 <span className="ml-2 text-xs font-medium text-slate-600">{props.connected ? props.accountEmail ?? "Connecté" : "Déconnecté"}</span></h2>
+          <p className="mt-1 text-sm text-slate-600">{props.connected ? `Dernière synchronisation · ${lastSync}` : "Synchronise la boîte de réception Outlook."}</p>
         </div>
-        <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700">
-          {connected ? `Connecte${accountEmail ? `: ${accountEmail}` : ""}` : configured ? "Pret a connecter" : "Configuration incomplete"}
-        </div>
-      </div>
-
-      <div className="grid gap-3 md:grid-cols-3">
-        <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-3">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Etat</div>
-          <div className="mt-1 text-sm font-semibold text-slate-950">{connected ? "Connexion active" : "Hors ligne"}</div>
-        </div>
-        <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-3">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Derniere synchro</div>
-          <div className="mt-1 text-sm font-semibold text-slate-950">{formatDateTime(lastSyncedAt)}</div>
-        </div>
-        <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-3">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Callback a declarer</div>
-          <div className="mt-1 break-all text-xs text-slate-700">{callbackUrl}</div>
+        <div className="flex flex-wrap gap-2">
+          {props.connected && <button type="button" onClick={() => changeConnection("disconnect")} disabled={loading !== null} className="button-secondary">Déconnecter</button>}
+          {props.enabled && props.configured ? (
+            props.connected ? <button type="button" onClick={() => changeConnection("sync")} disabled={loading !== null} className="button-primary">{loading === "sync" ? "Synchronisation…" : "Synchroniser"}</button>
+              : <a href="/api/integrations/outlook/start?returnTo=/emails" className="button-primary">Connecter Outlook</a>
+          ) : <Link href="/settings#outlook-settings" className="button-primary">Configurer Outlook</Link>}
         </div>
       </div>
-
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
-        <p>
-          <strong>Polling:</strong> {pollingEnabled ? `actif toutes les ${pollingIntervalMinutes} min` : "desactive"}
-        </p>
-        <p className="mt-1">
-          <strong>Extraction auto:</strong> {automationEnabled ? `active sur la categorie "${automationCategory || "non renseignee"}"` : "desactivee"}
-        </p>
-      </div>
-
-      {!configured ? (
-        <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          Renseigne d'abord `tenant ID`, `client ID` et `client secret` dans Parametres &gt; Integrations.
-        </p>
-      ) : null}
-
-      {error ? (
-        <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>
-      ) : null}
-
-      <div className="flex flex-wrap gap-2">
-        {!connected ? (
-          <a href="/api/integrations/outlook/start?returnTo=/emails" className="button-primary">
-            Connecter Outlook
-          </a>
-        ) : (
-          <>
-            <button type="button" onClick={sync} className="button-primary" disabled={loading !== null}>
-              {loading === "sync" ? "Synchronisation..." : "Synchroniser la boite"}
-            </button>
-            <button type="button" onClick={disconnect} className="button-secondary" disabled={loading !== null}>
-              {loading === "disconnect" ? "Deconnexion..." : "Deconnecter"}
-            </button>
-          </>
-        )}
-      </div>
+      {feedback && <p role={feedback.error ? "alert" : "status"} className={`text-sm ${feedback.error ? "text-rose-700" : "text-emerald-800"}`}>{feedback.text}</p>}
+      <details className="text-xs text-slate-600">
+        <summary className="cursor-pointer">Configuration de la synchronisation</summary>
+        <div className="mt-2 space-y-1">
+          <p>URI de redirection Microsoft Entra <code className="break-all">{callbackUrl}</code></p>
+          <p>{props.pollingEnabled ? `Synchronisation automatique toutes les ${props.pollingIntervalMinutes} min` : "Synchronisation manuelle"}</p>
+          <p>{props.automationEnabled ? `Extraction automatique pour la catégorie « ${props.automationCategory} »` : "Extraction automatique désactivée"}</p>
+        </div>
+      </details>
     </section>
   );
 }
