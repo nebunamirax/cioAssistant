@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
+import { lockWrites } from "@/lib/db/write-transaction";
 import { createAction, updateAction } from "@/lib/services/action-service";
 import { updateProject } from "@/lib/services/project-service";
 import type { ActionInput, ActionUpdateInput } from "@/lib/validation/action";
@@ -263,8 +264,7 @@ async function checkCurrent(db: Prisma.TransactionClient, { command, title }: St
 export async function applyPmoImport(importId: string, selectedIds: string[], authorId: string): Promise<PmoApplied> {
   const selected = [...new Set(selectedIds)].sort();
   return prisma.$transaction(async (db) => {
-    // Acquire SQLite's writer lock before reading the draft and target versions.
-    await db.$executeRaw`UPDATE "PmoImport" SET "id" = "id" WHERE 0`;
+    await lockWrites(db);
     const draft = await db.pmoImport.findUnique({ where: { id: importId, authorId } });
     if (!draft) throw new PmoIntakeError("Cet aperçu est introuvable. Relancez l’analyse.", 404);
     if (draft.result) {

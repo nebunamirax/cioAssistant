@@ -1,3 +1,4 @@
+import { patchSchema } from "@/lib/validation/patch-schema";
 import { type Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { decisionFilterSchema, decisionSchema, type DecisionFilters, type DecisionInput } from "@/lib/validation/decision";
@@ -70,7 +71,7 @@ export function parseDecisionOptions(optionsJson?: string | null) {
 
 
 export async function updateDecision(id: string, payload: unknown, db: Prisma.TransactionClient = prisma) {
-  const patch = decisionSchema.partial().strict().parse(payload);
+  const patch = patchSchema(decisionSchema).strict().parse(payload);
   const existing = await db.decision.findUniqueOrThrow({ where: { id } });
   const data = buildDecisionCreateData(decisionSchema.parse({
     ...existing,

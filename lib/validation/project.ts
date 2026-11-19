@@ -1,3 +1,4 @@
+import { patchSchema } from "./patch-schema";
 import { PRIORITIES, PROJECT_STATUSES, PROJECT_TYPES } from "@/lib/domain/constants";
 import { z } from "zod";
 
@@ -13,7 +14,7 @@ export const projectSchema = z.object({
   targetDate: z.string().datetime().optional().nullable()
 });
 
-export const projectUpdateSchema = projectSchema.partial().extend({
+export const projectUpdateSchema = patchSchema(projectSchema).extend({
   title: z.string().min(3).optional(),
   type: z.enum(PROJECT_TYPES).optional()
 }).refine((value) => Object.keys(value).length > 0, {

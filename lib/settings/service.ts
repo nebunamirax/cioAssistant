@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { appSettingsSchema, appSettingsUpdateSchema, type AppSettings } from "@/lib/settings/schema";
+import { writeDataFile } from "@/lib/settings/shared-data";
 
 const settingsDirectory = path.join(process.cwd(), ".data");
 const settingsPath = path.join(settingsDirectory, "app-settings.json");
@@ -28,12 +29,6 @@ function normalizeSettings(input: AppSettings): AppSettings {
   };
 }
 
-function ensureSettingsDirectory() {
-  if (!fs.existsSync(settingsDirectory)) {
-    fs.mkdirSync(settingsDirectory, { recursive: true });
-  }
-}
-
 export function getSettingsPath() {
   return settingsPath;
 }
@@ -53,7 +48,6 @@ export function loadAppSettingsSync(): AppSettings {
 
 export async function saveAppSettings(input: AppSettings) {
   const validated = normalizeSettings(appSettingsUpdateSchema.parse(input));
-  ensureSettingsDirectory();
-  await fs.promises.writeFile(settingsPath, `${JSON.stringify(validated, null, 2)}\n`, "utf-8");
+  await writeDataFile(settingsPath, `${JSON.stringify(validated, null, 2)}\n`);
   return validated;
 }

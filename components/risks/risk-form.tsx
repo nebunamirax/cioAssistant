@@ -16,10 +16,11 @@ type VendorOption = {
 
 type RiskFormProps = {
   projects: ProjectOption[];
+  initialProjectId?: string;
   vendors: VendorOption[];
 };
 
-export function RiskForm({ projects, vendors }: RiskFormProps) {
+export function RiskForm({ projects, vendors, initialProjectId = "" }: RiskFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,7 +32,7 @@ export function RiskForm({ projects, vendors }: RiskFormProps) {
   const [status, setStatus] = useState<(typeof RISK_STATUSES)[number]>("OPEN");
   const [mitigation, setMitigation] = useState("");
   const [ownerName, setOwnerName] = useState("");
-  const [projectId, setProjectId] = useState("");
+  const [projectId, setProjectId] = useState(initialProjectId);
   const [vendorId, setVendorId] = useState("");
 
   const submit = async (event: React.FormEvent) => {
@@ -71,7 +72,7 @@ export function RiskForm({ projects, vendors }: RiskFormProps) {
     setStatus("OPEN");
     setMitigation("");
     setOwnerName("");
-    setProjectId("");
+    setProjectId(initialProjectId);
     setVendorId("");
     setLoading(false);
     router.refresh();
@@ -126,8 +127,8 @@ export function RiskForm({ projects, vendors }: RiskFormProps) {
         </div>
         <div className="grid gap-3 md:grid-cols-2">
           <div>
-            <label className="field-label">Projet</label>
-            <select value={projectId} onChange={(event) => setProjectId(event.target.value)} className="field-select">
+            <label className="field-label" htmlFor="risk-project">Projet</label>
+            <select id="risk-project" value={projectId} onChange={(event) => setProjectId(event.target.value)} className="field-select">
               <option value="">Aucun</option>
               {projects.map((project) => <option key={project.id} value={project.id}>{project.title}</option>)}
             </select>

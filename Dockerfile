@@ -8,7 +8,13 @@ RUN arch="$(dpkg --print-architecture)" && \
     case "$arch" in amd64) addon_arch=x64; system_arch=x86_64;; arm64) addon_arch=arm64; system_arch=aarch64;; esac && \
     cp node_modules/@kutalia/whisper-node-addon/dist/linux-"$addon_arch"/lib*.so* /usr/lib/"$system_arch"-linux-gnu/ && ldconfig
 COPY . .
-ENV DATABASE_URL=file:/app/.data/cioassistant.db AI_PROVIDER_MODE=local AI_MODEL=heuristic-v1 NEXT_TELEMETRY_DISABLED=1
-RUN npm run prisma:generate && npm run build
+ARG CIO_DATABASE_PROVIDER=sqlite
+ENV CIO_DATABASE_PROVIDER=${CIO_DATABASE_PROVIDER} AI_PROVIDER_MODE=local AI_MODEL=heuristic-v1 NEXT_TELEMETRY_DISABLED=1
+RUN node scripts/prisma-provider.mjs && \
+    if [ "$CIO_DATABASE_PROVIDER" = postgresql ]; then \
+      DATABASE_URL=postgresql://build:build@localhost:5432/build ./node_modules/.bin/prisma generate --schema prisma/postgresql/schema.prisma; \
+    else \
+      DATABASE_URL=file:/app/.data/cioassistant.db npm run prisma:generate; \
+    fi && npm run build
 RUN sh scripts/package-mcp.sh
-CMD ["sh", "-ec", "node scripts/database.mjs check && ./node_modules/.bin/prisma migrate deploy && exec npm start"]
+CMD ["node", "scripts/start.mjs"]

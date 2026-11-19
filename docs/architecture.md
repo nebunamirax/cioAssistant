@@ -182,5 +182,10 @@
 - Fonctionnement applicatif intact sans authentification Microsoft.
 
 ## Stratégie Notion
-- Connecteur isolé sous `app/api/integrations/notion/*`.
-- Dépendance non bloquante pour les modules cœur.
+- Le point d’entrée historique expose une ébauche de connecteur. L’espace de travail intégré gère les pages et leurs vues.
+
+## Documentation et assistants externes
+
+- L’éditeur BlockNote Community enregistre les pages, leurs blocs et leurs révisions dans la base métier. Les vues de suivi interrogent directement les modèles métier et utilisent leurs identifiants.
+- Le serveur MCP partage le catalogue d’outils entre l’extension stdio et `/api/mcp`. Le service métier valide les écritures et compare la version relue par le client avec celle de la fiche dans la transaction.
+- [Déploiement, droits d’accès et PostgreSQL](espace-de-travail.md)

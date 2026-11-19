@@ -4,6 +4,7 @@ import { actionLabels, priorityLabels } from "@/lib/domain/display-labels";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ACTION_STATUSES, PRIORITIES } from "@/lib/domain/constants";
+import { fromDatetimeLocal, toDatetimeLocal } from "@/lib/domain/datetime-local";
 
 type ActionFormValues = {
   title: string;
@@ -40,7 +41,8 @@ export function ActionForm({ mode = "create", actionId, initialValues, showHeade
   const [description, setDescription] = useState(initialValues?.description ?? "");
   const [ownerId, setOwnerId] = useState(initialValues?.ownerId ?? "");
   const [ownerName, setOwnerName] = useState(initialValues?.ownerName ?? "");
-  const [dueDate, setDueDate] = useState(initialValues?.dueDate ?? "");
+  const [initialLocalDueDate, setInitialLocalDueDate] = useState("");
+  const [dueDateDraft, setDueDateDraft] = useState<string | null>(null);
   const [status, setStatus] = useState<(typeof ACTION_STATUSES)[number]>(initialValues?.status ?? "TODO");
   const [priority, setPriority] = useState<(typeof PRIORITIES)[number]>(initialValues?.priority ?? "NORMAL");
   const [projectId, setProjectId] = useState(initialValues?.projectId ?? "");
@@ -51,7 +53,9 @@ export function ActionForm({ mode = "create", actionId, initialValues, showHeade
     setDescription(initialValues?.description ?? "");
     setOwnerId(initialValues?.ownerId ?? "");
     setOwnerName(initialValues?.ownerName ?? "");
-    setDueDate(initialValues?.dueDate ?? "");
+    // The browser's time zone is available consistently after hydration.
+    setInitialLocalDueDate(toDatetimeLocal(initialValues?.dueDate));
+    setDueDateDraft(null);
     setStatus(initialValues?.status ?? "TODO");
     setPriority(initialValues?.priority ?? "NORMAL");
     setProjectId(initialValues?.projectId ?? "");
@@ -100,7 +104,9 @@ export function ActionForm({ mode = "create", actionId, initialValues, showHeade
           ...(members ? { ownerId: ownerId || null } : { ownerName }),
           status,
           priority,
-          dueDate: dueDate ? new Date(dueDate).toISOString() : null,
+          ...(mode === "create" || (dueDateDraft !== null && dueDateDraft !== initialLocalDueDate)
+            ? { dueDate: fromDatetimeLocal(dueDateDraft ?? initialLocalDueDate) }
+            : {}),
           projectId: projectId || null
         })
       });
@@ -116,7 +122,8 @@ export function ActionForm({ mode = "create", actionId, initialValues, showHeade
         setDescription("");
         setOwnerName("");
         setOwnerId("");
-        setDueDate("");
+        setInitialLocalDueDate("");
+        setDueDateDraft(null);
         setStatus("TODO");
         setPriority("NORMAL");
         setProjectId(initialValues?.projectId ?? "");
@@ -203,8 +210,8 @@ export function ActionForm({ mode = "create", actionId, initialValues, showHeade
           <label className="field-label" htmlFor="action-due">Échéance</label>
           <input id="action-due"
             type="datetime-local"
-            value={dueDate}
-            onChange={(e) => setDueDate(e.target.value)}
+            value={dueDateDraft ?? initialLocalDueDate}
+            onChange={(e) => setDueDateDraft(e.target.value)}
             className="field-input"
           />
         </div>

@@ -14,8 +14,10 @@ import {
 
 const prisma = new PrismaClient();
 
-function date(value: string) {
-  return new Date(`${value}T09:00:00.000Z`);
+const today = new Date();
+
+function date(days: number) {
+  return new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() + days, 9));
 }
 
 async function main() {
@@ -48,7 +50,7 @@ async function main() {
       type: PROJECT_TYPES[3],
       status: PROJECT_STATUSES[1],
       priority: PRIORITIES[3],
-      targetDate: date("2026-11-30")
+      targetDate: date(44)
     },
     {
       id: "project-zero-trust",
@@ -56,7 +58,7 @@ async function main() {
       type: PROJECT_TYPES[5],
       status: PROJECT_STATUSES[1],
       priority: PRIORITIES[3],
-      targetDate: date("2026-09-15")
+      targetDate: date(21)
     },
     {
       id: "project-cloud-cost",
@@ -64,7 +66,7 @@ async function main() {
       type: PROJECT_TYPES[4],
       status: PROJECT_STATUSES[1],
       priority: PRIORITIES[2],
-      targetDate: date("2026-07-15")
+      targetDate: date(60)
     },
     {
       id: "project-itsm",
@@ -72,7 +74,7 @@ async function main() {
       type: PROJECT_TYPES[3],
       status: PROJECT_STATUSES[1],
       priority: PRIORITIES[2],
-      targetDate: date("2026-10-01")
+      targetDate: date(32)
     },
     {
       id: "project-network-refresh",
@@ -80,7 +82,7 @@ async function main() {
       type: PROJECT_TYPES[5],
       status: PROJECT_STATUSES[2],
       priority: PRIORITIES[2],
-      targetDate: date("2026-08-30")
+      targetDate: date(73)
     }
   ];
 
@@ -90,18 +92,28 @@ async function main() {
       update: project,
       create: {
         ...project,
-        description: "Initiative structurante du portefeuille DSI 2026.",
-        startDate: date("2026-03-01")
+        description: "Initiative structurante du portefeuille DSI de démonstration.",
+        startDate: date(-30)
       }
     });
   }
 
+  const milestones = [
+    ["milestone-demo-erp", "Valider le périmètre ERP", "project-erp-modernization", 10],
+    ["milestone-demo-mfa", "Ouvrir le pilote MFA prestataires", "project-zero-trust", 14],
+    ["milestone-demo-itsm", "Recetter le catalogue de services", "project-itsm", 25]
+  ] as const;
+  for (const [id, title, projectId, days] of milestones) {
+    const milestone = { title, projectId, dueDate: date(days) };
+    await prisma.milestone.upsert({ where: { id }, create: { id, ...milestone }, update: milestone });
+  }
+
   const contracts = [
-    ["contract-m365", "Microsoft 365 E5", "vendor-microsoft", "project-zero-trust", "2026-06-30", 420000],
-    ["contract-aws", "Contrat AWS Enterprise", "vendor-aws", "project-cloud-cost", "2026-07-20", 620000],
-    ["contract-snow", "ServiceNow ITSM Pro", "vendor-servicenow", "project-itsm", "2026-09-30", 280000],
-    ["contract-sap", "SAP S/4HANA programme", "vendor-sap", "project-erp-modernization", "2027-01-31", 940000],
-    ["contract-orange", "WAN sites critiques", "vendor-orange", "project-network-refresh", "2026-06-18", 310000]
+    ["contract-m365", "Microsoft 365 E5", "vendor-microsoft", "project-zero-trust", 95, 420000],
+    ["contract-aws", "Contrat AWS Enterprise", "vendor-aws", "project-cloud-cost", 113, 620000],
+    ["contract-snow", "ServiceNow ITSM Pro", "vendor-servicenow", "project-itsm", 204, 280000],
+    ["contract-sap", "SAP S/4HANA programme", "vendor-sap", "project-erp-modernization", 177, 940000],
+    ["contract-orange", "WAN sites critiques", "vendor-orange", "project-network-refresh", 88, 310000]
   ] as const;
 
   for (const [id, title, vendorId, projectId, endDate, amountPlanned] of contracts) {
@@ -116,7 +128,7 @@ async function main() {
         status: CONTRACT_STATUSES[1],
         renewalType: RENEWAL_TYPES[1],
         contractType: "Abonnement / services",
-        startDate: date("2025-07-01"),
+        startDate: date(-245),
         endDate: date(endDate),
         noticePeriodDays: 90,
         amountPlanned,
@@ -143,7 +155,7 @@ async function main() {
         category: "Transformation DSI",
         projectId,
         vendorId,
-        fiscalYear: 2026,
+        fiscalYear: today.getUTCFullYear(),
         plannedAmount,
         committedAmount,
         estimatedActualAmount,
@@ -153,13 +165,13 @@ async function main() {
   }
 
   const actions = [
-    ["action-erp-arbitration", "Valider le périmètre lot 1 ERP", "project-erp-modernization", ACTION_STATUSES[3], PRIORITIES[3], "2026-06-12"],
-    ["action-erp-data", "Finaliser la stratégie reprise de données", "project-erp-modernization", ACTION_STATUSES[1], PRIORITIES[2], "2026-06-25"],
-    ["action-zta-mfa", "Étendre MFA aux comptes prestataires", "project-zero-trust", ACTION_STATUSES[1], PRIORITIES[3], "2026-06-10"],
-    ["action-zta-board", "Préparer arbitrage segmentation réseau", "project-zero-trust", ACTION_STATUSES[2], PRIORITIES[3], "2026-06-05"],
-    ["action-cloud-savings", "Présenter plan savings AWS", "project-cloud-cost", ACTION_STATUSES[0], PRIORITIES[2], "2026-06-20"],
-    ["action-itsm-catalog", "Publier catalogue services MVP", "project-itsm", ACTION_STATUSES[1], PRIORITIES[2], "2026-07-05"],
-    ["action-network-sites", "Replanifier déploiement sites industriels", "project-network-refresh", ACTION_STATUSES[2], PRIORITIES[2], "2026-06-15"]
+    ["action-erp-arbitration", "Valider le périmètre lot 1 ERP", "project-erp-modernization", ACTION_STATUSES[3], PRIORITIES[3], -2],
+    ["action-erp-data", "Finaliser la stratégie reprise de données", "project-erp-modernization", ACTION_STATUSES[1], PRIORITIES[2], 4],
+    ["action-zta-mfa", "Étendre MFA aux comptes prestataires", "project-zero-trust", ACTION_STATUSES[1], PRIORITIES[3], 7],
+    ["action-zta-board", "Préparer arbitrage segmentation réseau", "project-zero-trust", ACTION_STATUSES[2], PRIORITIES[3], -3],
+    ["action-cloud-savings", "Présenter plan savings AWS", "project-cloud-cost", ACTION_STATUSES[0], PRIORITIES[2], 5],
+    ["action-itsm-catalog", "Publier catalogue services MVP", "project-itsm", ACTION_STATUSES[1], PRIORITIES[2], 14],
+    ["action-network-sites", "Replanifier déploiement sites industriels", "project-network-refresh", ACTION_STATUSES[2], PRIORITIES[2], -1]
   ] as const;
 
   for (const [id, title, projectId, status, priority, dueDate] of actions) {
@@ -216,7 +228,7 @@ async function main() {
   for (const [id, subject, projectId, decider, recommendation] of decisions) {
     await prisma.decision.upsert({
       where: { id },
-      update: { subject, projectId, decider, recommendation },
+      update: { subject, projectId, decider, recommendation, targetDate: date(2) },
       create: {
         id,
         subject,
@@ -224,7 +236,7 @@ async function main() {
         decider,
         recommendation,
         status: DECISION_STATUSES[0],
-        targetDate: date("2026-06-18"),
+        targetDate: date(2),
         context: "Décision nécessaire pour tenir la trajectoire portefeuille.",
         optionsJson: JSON.stringify(["Option prudente", "Option accélérée", "Option report"])
       }
@@ -236,7 +248,7 @@ async function main() {
     update: {},
     create: {
       id: "communication-comex-june",
-      title: "Synthèse COMEX DSI - juin",
+      title: "Synthèse COMEX DSI",
       status: COMMUNICATION_STATUSES[1],
       type: "COMEX",
       contentText: "Point portefeuille, risques majeurs, arbitrages attendus et trajectoire budget.",
@@ -246,11 +258,11 @@ async function main() {
 
   await prisma.meetingNote.upsert({
     where: { id: "meeting-codir-dsi" },
-    update: {},
+    update: { meetingDate: date(-5) },
     create: {
       id: "meeting-codir-dsi",
       title: "CODIR DSI - revue portefeuille",
-      meetingDate: date("2026-05-28"),
+      meetingDate: date(-5),
       rawContent: "Revue des projets ERP, Zero Trust, ITSM et réseau. Actions sur arbitrages et risques.",
       summary: "Le CODIR confirme les priorités ERP et cybersécurité, avec arbitrages COMEX à préparer.",
       extractedActionsJson: JSON.stringify(["Préparer arbitrage ERP lot 1", "Mettre à jour plan MFA prestataires"]),

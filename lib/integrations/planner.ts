@@ -4,6 +4,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
 import { loadAppSettingsSync } from "@/lib/settings/service";
+import { withMicrosoftLock, writeDataFile } from "@/lib/settings/shared-data";
 import type { ExternalItemInput } from "@/lib/domain/external-tracking";
 
 const scopes = "offline_access https://graph.microsoft.com/Tasks.Read https://graph.microsoft.com/User.ReadBasic.All";
@@ -80,24 +81,17 @@ async function exchangeToken(params: URLSearchParams, previousRefresh = "") {
     expiresAt: Date.now() + Math.max(30, (token.data.expires_in ?? 3600) - 90) * 1000,
     registration: config.registration
   };
-  const temporary = `${sessionPath}.${randomBytes(8).toString("hex")}`;
-  await fs.mkdir(path.dirname(sessionPath), { recursive: true });
-  try {
-    await fs.writeFile(temporary, JSON.stringify(session), { mode: 0o600 });
-    await fs.rename(temporary, sessionPath);
-  } finally {
-    await fs.rm(temporary, { force: true });
-  }
+  await writeDataFile(sessionPath, JSON.stringify(session));
   return session.accessToken;
 }
 
 export async function finishPlannerAuthorization(origin: string, code: string, verifier: string) {
-  await exchangeToken(new URLSearchParams({
+  await withMicrosoftLock("planner", () => exchangeToken(new URLSearchParams({
     grant_type: "authorization_code",
     code,
     code_verifier: verifier,
     redirect_uri: plannerCallbackUrl(origin)
-  }));
+  })));
 }
 
 let refreshing: Promise<string> | undefined;
@@ -105,10 +99,14 @@ let refreshing: Promise<string> | undefined;
 async function accessToken() {
   const session = await readSession();
   if (session && session.expiresAt > Date.now()) return session.accessToken;
-  if (!session?.refreshToken) throw new Error("Connecte ou reconnecte ton compte Planner.");
-  refreshing ??= exchangeToken(new URLSearchParams({
-    grant_type: "refresh_token", refresh_token: session.refreshToken
-  }), session.refreshToken).finally(() => { refreshing = undefined; });
+  refreshing ??= withMicrosoftLock("planner", async () => {
+    const latest = await readSession();
+    if (latest && latest.expiresAt > Date.now()) return latest.accessToken;
+    if (!latest?.refreshToken) throw new Error("Connecte ou reconnecte ton compte Planner.");
+    return exchangeToken(new URLSearchParams({
+      grant_type: "refresh_token", refresh_token: latest.refreshToken
+    }), latest.refreshToken);
+  }).finally(() => { refreshing = undefined; });
   return refreshing;
 }
 
@@ -149,7 +147,7 @@ const taskSchema = z.object({
   percentComplete: z.number().int().min(0).max(100),
   dueDateTime: z.string().datetime({ offset: true }).nullish(),
   priority: z.number().int().nullish(),
-  assignments: z.record(z.unknown()).nullish()
+  assignments: z.record(z.string(), z.unknown()).nullish()
 });
 
 export async function listPlannerPlans() {

@@ -258,7 +258,7 @@ export default async function ActionsPage({ searchParams: searchParamsPromise }:
                 ownerName: selectedAction.ownerName ?? "",
                 status: selectedActionStatus,
                 priority: selectedActionPriority,
-                dueDate: selectedAction.dueDate ? new Date(selectedAction.dueDate).toISOString().slice(0, 16) : "",
+                dueDate: selectedAction.dueDate?.toISOString() ?? null,
                 projectId: selectedAction.projectId ?? ""
               } : projectId && !filters.unassigned && projectOptions.some((project) => project.id === projectId) ? { projectId } : undefined}
               showHeader={false}

@@ -12,7 +12,7 @@ export const appSettingsSchema = z.object({
     compatibleApiKey: z.string().default(""),
     compatibleModel: z.string().default("mistralai/devstral-small-2507"),
     compatibleModels: z.string().default("mistralai/devstral-small-2507")
-  }).default({}),
+  }).prefault({}),
   integrations: z.object({
     outlookEnabled: z.boolean().default(false),
     outlookTenantId: z.string().default(""),
@@ -25,7 +25,7 @@ export const appSettingsSchema = z.object({
     notionEnabled: z.boolean().default(false),
     notionApiKey: z.string().default(""),
     notionDatabaseId: z.string().default("")
-  }).default({})
+  }).prefault({})
 });
 
 export const appSettingsUpdateSchema = appSettingsSchema;

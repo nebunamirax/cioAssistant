@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import type { Prisma } from "@prisma/client";
 import { reportFields } from "@/lib/validation/monthly-report";
 import { prisma } from "@/lib/db/prisma";
+import { lockWrites } from "@/lib/db/write-transaction";
 
 const paris = "Europe/Paris";
 const monthPattern = /^\d{4}-(?:0[1-9]|1[0-2])$/;
@@ -32,7 +33,7 @@ export function monthBounds(month: string) {
 export async function saveMonthlyDraft(input: unknown, db: Prisma.TransactionClient = prisma) {
   const { month, comment } = reportFields.parse(input);
   if (!allowedMonths().includes(month)) throw new Error("Choisissez le mois courant ou précédent.");
-  await db.$executeRaw`UPDATE "MonthlyReport" SET "month" = "month" WHERE 0`;
+  await lockWrites(db);
   const existing = await db.monthlyReport.findUnique({ where: { month } });
   if (existing?.archive) throw new Error("Le rapport est archivé.");
   const period = monthBounds(month);
@@ -69,7 +70,7 @@ export function reportFingerprint(row: { draft: string; comment: string; archive
 
 export async function archiveMonthly(month: string, expectedFingerprint: string) {
   return prisma.$transaction(async (db) => {
-    await db.$executeRaw`UPDATE "MonthlyReport" SET "month" = "month" WHERE 0`;
+    await lockWrites(db);
     const row = await db.monthlyReport.findUniqueOrThrow({ where: { month } });
     if (reportFingerprint(row) !== expectedFingerprint) throw new Error("Le brouillon a changé. Rechargez le rapport.");
     if (row.archive) return row;

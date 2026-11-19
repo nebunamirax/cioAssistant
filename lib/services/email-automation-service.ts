@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db/prisma";
 import { type EmailAutomationStatus } from "@/lib/domain/constants";
 import { getOutlookConnectionStatus } from "@/lib/integrations/outlook";
 import { loadAppSettingsSync } from "@/lib/settings/service";
+import { withMicrosoftLock } from "@/lib/settings/shared-data";
 import { syncInboxEmails } from "@/lib/services/email-service";
 import { ingestAIIntake } from "@/lib/services/ai-intake-service";
 
@@ -219,7 +220,7 @@ export async function processAutomatedEmails(limit = 20) {
   };
 }
 
-export async function syncAndProcessInboxEmails(limit = 50) {
+async function syncAndProcess(limit: number) {
   const syncResult = await syncInboxEmails(limit);
   const processingResult = await processAutomatedEmails(limit);
 
@@ -227,6 +228,10 @@ export async function syncAndProcessInboxEmails(limit = 50) {
     ...syncResult,
     ...processingResult
   };
+}
+
+export async function syncAndProcessInboxEmails(limit = 50) {
+  return withMicrosoftLock("outlook", () => syncAndProcess(limit));
 }
 
 async function runEmailAutomationCycle() {
@@ -244,7 +249,7 @@ async function runEmailAutomationCycle() {
     return;
   }
 
-  await syncAndProcessInboxEmails(50);
+  await syncAndProcess(50);
 }
 
 export function startEmailAutomationWorker() {
@@ -263,7 +268,7 @@ export function startEmailAutomationWorker() {
 
     state.running = true;
     try {
-      await runEmailAutomationCycle();
+      await withMicrosoftLock("outlook", runEmailAutomationCycle);
     } catch {
       // L'automatisation doit rester non bloquante pour le serveur Next local.
     } finally {

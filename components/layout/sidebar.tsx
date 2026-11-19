@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useRef, type ReactNode } from "react";
 import { WorkspaceIcon } from "@/components/ui/workspace-icon";
-import { primaryLinks, settingsLink, suggestionsLink, toolLinks, workspaceLinks } from "./workspace-navigation";
+import { primaryLinks, settingsLink, suggestionsLink, toolLinks, workspaceLinks, workspaceToolGroups } from "./workspace-navigation";
 import { WorkspaceSearch } from "./workspace-search";
 
 function isCurrent(path: string, href: string) {
@@ -18,7 +18,6 @@ export function WorkspaceShell({ role, name, children }: { role: string; name: s
   const mainLinks = workspaceLinks(primaryLinks, role);
   const tools = workspaceLinks(toolLinks, role);
   const current = [...mainLinks, ...tools, settingsLink, suggestionsLink].find((link) => isCurrent(path, link.href));
-  const activeTool = tools.some((link) => isCurrent(path, link.href));
   const initials = name.trim().split(/\s+/).slice(0, 2).map((word) => word[0]?.toUpperCase()).join("");
 
   function navLink(link: (typeof mainLinks)[number]) {
@@ -43,14 +42,20 @@ export function WorkspaceShell({ role, name, children }: { role: string; name: s
           {tools.length === 1 ? (
             <div className="workspace-nav-tools">{tools.map(navLink)}</div>
           ) : (
-            <details key={String(activeTool)} open={activeTool || undefined} className="workspace-nav-tools">
-              <summary className="workspace-nav-link workspace-tools-toggle">
-                <WorkspaceIcon name="more" />
-                <span className="flex-1">Autres outils</span>
-                <WorkspaceIcon name="down" className="workspace-disclosure h-3.5 w-3.5" />
-              </summary>
-              <div className="mt-1 space-y-0.5 pl-2">{tools.map(navLink)}</div>
-            </details>
+            <div className="workspace-nav-tools space-y-0.5">
+              {workspaceToolGroups.map(({ label, icon, routes }) => {
+                const links = routes.flatMap((href) => tools.filter((link) => link.href === href));
+                const active = links.some((link) => isCurrent(path, link.href));
+                return <details key={`${label}:${active}`} open={active || undefined} className="workspace-tool-group">
+                  <summary className="workspace-nav-link workspace-tools-toggle">
+                    <WorkspaceIcon name={icon} />
+                    <span className="flex-1">{label}</span>
+                    <WorkspaceIcon name="down" className="workspace-disclosure h-3.5 w-3.5" />
+                  </summary>
+                  <div className="mt-1 space-y-0.5 pl-2">{links.map(navLink)}</div>
+                </details>;
+              })}
+            </div>
           )}
         </nav>
         <div className="workspace-footer">

@@ -1,3 +1,5 @@
+import { patchSchema } from "@/lib/validation/patch-schema";
+import { z } from "zod";
 import { intakeModuleDraftPrompt, intakePlanningPrompt, intakeSystemPrompt } from "@/lib/ai/prompts";
 import { buildAIContextBlock } from "@/lib/ai/request-context";
 import {
@@ -173,7 +175,7 @@ export class OpenAIProvider implements AIProvider {
   async suggestDraft(module: IntakeModule, input: AIRequest) {
     const schema = getIntakeDraftJsonSchema(module);
     const parsed = await this.requestJSON(input, intakeModuleDraftPrompt(module), schema.name, schema.schema);
-    return getIntakeDraftSchema(module).partial().parse(parsed);
+    return patchSchema(getIntakeDraftSchema(module) as z.ZodObject).parse(parsed);
   }
 
   summarize(input: AIRequest) {

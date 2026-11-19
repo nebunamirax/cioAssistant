@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
+import { fromDatetimeLocal, toDatetimeLocal } from "@/lib/domain/datetime-local";
 
 import {
   ACTION_STATUSES,
@@ -47,19 +48,6 @@ const moduleOptions = [
 
 function excerpt(text: string) {
   return text.trim().slice(0, 320);
-}
-
-function toDatetimeLocal(value: unknown) {
-  if (typeof value !== "string" || !value) {
-    return "";
-  }
-
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "" : new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-}
-
-function fromDatetimeLocal(value: string) {
-  return value ? new Date(value).toISOString() : null;
 }
 
 function buildDefaultDraft(module: string, review: ReviewRecord): DraftState {

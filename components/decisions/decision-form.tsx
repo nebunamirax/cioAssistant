@@ -11,9 +11,10 @@ type ProjectOption = {
 
 type DecisionFormProps = {
   projects: ProjectOption[];
+  initialProjectId?: string;
 };
 
-export function DecisionForm({ projects }: DecisionFormProps) {
+export function DecisionForm({ projects, initialProjectId = "" }: DecisionFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -24,7 +25,7 @@ export function DecisionForm({ projects }: DecisionFormProps) {
   const [decider, setDecider] = useState("");
   const [status, setStatus] = useState<(typeof DECISION_STATUSES)[number]>("PENDING");
   const [targetDate, setTargetDate] = useState("");
-  const [projectId, setProjectId] = useState("");
+  const [projectId, setProjectId] = useState(initialProjectId);
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -60,7 +61,7 @@ export function DecisionForm({ projects }: DecisionFormProps) {
     setDecider("");
     setStatus("PENDING");
     setTargetDate("");
-    setProjectId("");
+    setProjectId(initialProjectId);
     setLoading(false);
     router.refresh();
   };
@@ -108,8 +109,8 @@ export function DecisionForm({ projects }: DecisionFormProps) {
         </div>
         <div className="grid gap-3 md:grid-cols-2">
           <div>
-            <label className="field-label">Projet</label>
-            <select value={projectId} onChange={(event) => setProjectId(event.target.value)} className="field-select">
+            <label className="field-label" htmlFor="decision-project">Projet</label>
+            <select id="decision-project" value={projectId} onChange={(event) => setProjectId(event.target.value)} className="field-select">
               <option value="">Aucun</option>
               {projects.map((project) => <option key={project.id} value={project.id}>{project.title}</option>)}
             </select>

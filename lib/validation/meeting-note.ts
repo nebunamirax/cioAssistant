@@ -1,3 +1,4 @@
+import { patchSchema } from "./patch-schema";
 import { z } from "zod";
 
 const stringListSchema = z.array(z.string().trim().min(1));
@@ -22,7 +23,7 @@ export const meetingNoteSchema = z.object({
   extractedDeadlines: stringListSchema.default([])
 });
 
-export const meetingNoteUpdateSchema = meetingNoteSchema.partial().refine((value) => Object.keys(value).length > 0, {
+export const meetingNoteUpdateSchema = patchSchema(meetingNoteSchema).refine((value) => Object.keys(value).length > 0, {
   message: "At least one field must be provided"
 });
 

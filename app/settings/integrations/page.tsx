@@ -26,8 +26,8 @@ export default async function IntegrationsPage({ searchParams: searchParamsPromi
   return (
     <div className="space-y-4">
       <header className="workbench-header">
-        <div><h1 className="text-2xl font-semibold">Intégrations</h1><p className="mt-1 text-sm text-slate-600">Rattache les tâches Planner et les tickets aux projets DSI.</p></div>
-        <div className="flex gap-2"><Link href="/settings/integrations/claude" className="button-primary">Claude</Link><Link href="/settings" className="button-secondary">Paramètres généraux</Link></div>
+        <div><h1 className="text-2xl font-semibold">Planner et tickets</h1><p className="mt-1 text-sm text-slate-600">Rattache les tâches Planner et les tickets aux projets DSI.</p></div>
+        <Link href="/settings#integrations-title" className="button-secondary">Toutes les intégrations</Link>
       </header>
       {searchParams?.planner === "connected" && <p role="status" className="workbench-panel text-sm text-emerald-800">Compte Planner connecté.</p>}
       {searchParams?.plannerError && <p role="alert" className="workbench-panel text-sm text-rose-700">{searchParams.plannerError}</p>}

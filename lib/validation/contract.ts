@@ -1,3 +1,4 @@
+import { patchSchema } from "./patch-schema";
 import { CONTRACT_STATUSES, RENEWAL_TYPES } from "@/lib/domain/constants";
 import { z } from "zod";
 
@@ -15,7 +16,7 @@ export const contractSchema = z.object({
   renewalType: z.enum(RENEWAL_TYPES).default("NONE")
 });
 
-export const contractUpdateSchema = contractSchema.partial().extend({
+export const contractUpdateSchema = patchSchema(contractSchema).extend({
   vendorId: z.string().min(1).optional(),
   title: z.string().min(3).optional()
 }).refine((value) => Object.keys(value).length > 0, {

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { buildOutlookCallbackUrl, disconnectOutlook, getOutlookConnectionStatus } from "@/lib/integrations/outlook";
 import { syncAndProcessInboxEmails } from "@/lib/services/email-automation-service";
 import { loadAppSettingsSync } from "@/lib/settings/service";
+import { MicrosoftOperationBusy } from "@/lib/settings/shared-data";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -38,12 +39,19 @@ export async function POST(request: Request) {
       }
     });
   } catch (error) {
-    return NextResponse.json({ error: (error as Error).message }, { status: 400 });
+    return NextResponse.json({ error: (error as Error).message }, {
+      status: error instanceof MicrosoftOperationBusy ? 409 : 400
+    });
   }
 }
 
 export async function DELETE() {
-  await disconnectOutlook();
+  try {
+    await disconnectOutlook();
+  } catch (error) {
+    if (!(error instanceof MicrosoftOperationBusy)) throw error;
+    return NextResponse.json({ error: error.message }, { status: 409 });
+  }
   return NextResponse.json({
     data: getOutlookConnectionStatus()
   });

@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { loadAppSettingsSync } from "@/lib/settings/service";
+import { withMicrosoftLock } from "@/lib/settings/shared-data";
 import {
   clearOutlookConnection,
   loadOutlookConnectionSync,
@@ -93,7 +94,8 @@ async function exchangeToken(params: URLSearchParams) {
       "Content-Type": "application/x-www-form-urlencoded"
     },
     body: params.toString(),
-    cache: "no-store"
+    cache: "no-store",
+    signal: AbortSignal.timeout(15000)
   });
 
   const payload = await response.json().catch(() => null);
@@ -114,7 +116,8 @@ async function fetchOutlookProfile(accessToken: string) {
     headers: {
       Authorization: `Bearer ${accessToken}`
     },
-    cache: "no-store"
+    cache: "no-store",
+    signal: AbortSignal.timeout(15000)
   });
 
   const payload = await response.json().catch(() => null);
@@ -152,20 +155,17 @@ export async function completeOutlookAuthorizationCodeFlow(input: {
   code: string;
   origin: string;
 }) {
-  const token = await exchangeToken(new URLSearchParams({
-    grant_type: "authorization_code",
-    code: input.code,
-    redirect_uri: buildOutlookCallbackUrl(input.origin),
-    scope: OUTLOOK_SCOPES.join(" ")
-  }));
-  const profile = await fetchOutlookProfile(token.access_token);
-  const connection = buildConnectionFromTokenResponse({
-    token,
-    profile
+  return withMicrosoftLock("outlook", async () => {
+    const token = await exchangeToken(new URLSearchParams({
+      grant_type: "authorization_code",
+      code: input.code,
+      redirect_uri: buildOutlookCallbackUrl(input.origin),
+      scope: OUTLOOK_SCOPES.join(" ")
+    }));
+    const profile = await fetchOutlookProfile(token.access_token);
+    const connection = buildConnectionFromTokenResponse({ token, profile });
+    return saveOutlookConnection(connection);
   });
-
-  await saveOutlookConnection(connection);
-  return connection;
 }
 
 export async function ensureOutlookAccessToken() {
@@ -210,7 +210,8 @@ export async function fetchLatestOutlookMessages(limit = 50) {
     headers: {
       Authorization: `Bearer ${accessToken}`
     },
-    cache: "no-store"
+    cache: "no-store",
+    signal: AbortSignal.timeout(15000)
   });
   const payload = await response.json().catch(() => null);
 
@@ -257,5 +258,5 @@ export function getOutlookConnectionStatus() {
 }
 
 export async function disconnectOutlook() {
-  await clearOutlookConnection();
+  await withMicrosoftLock("outlook", clearOutlookConnection);
 }

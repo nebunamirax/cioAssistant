@@ -1,0 +1,29 @@
+services:
+  app:
+    build:
+      args:
+        CIO_DATABASE_PROVIDER: postgresql
+    environment:
+      CIO_DATABASE_PROVIDER: postgresql
+      DATABASE_URL: postgresql://cio:${CIO_POSTGRES_PASSWORD:?Définissez CIO_POSTGRES_PASSWORD}@postgres:5432/cioassistant
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: cioassistant
+      POSTGRES_USER: cio
+      POSTGRES_PASSWORD: ${CIO_POSTGRES_PASSWORD:?Définissez CIO_POSTGRES_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "cio", "-d", "cioassistant"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+volumes:
+  postgres-data:

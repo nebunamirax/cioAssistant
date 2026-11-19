@@ -12,7 +12,7 @@ const apprenticeWrites = [
 
 export async function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname;
-  if (path === "/login" || path.startsWith("/api/auth/") || path === "/api/v1/business") return NextResponse.next();
+  if (path === "/login" || path.startsWith("/api/auth/") || path === "/api/v1/business" || path === "/api/mcp") return NextResponse.next();
   const api = path.startsWith("/api/");
   const member = await getSession(request.cookies.get(sessionCookie)?.value);
   if (!member) return api

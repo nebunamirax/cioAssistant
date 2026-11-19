@@ -2,10 +2,14 @@ import { RiskForm } from "@/components/risks/risk-form";
 import { prisma } from "@/lib/db/prisma";
 import { RISK_LEVELS, RISK_STATUSES } from "@/lib/domain/constants";
 import { listRisks } from "@/lib/services/risk-service";
+import { riskLevelLabels, riskStatusLabels } from "@/lib/domain/display-labels";
+import { ReviewStatusForm } from "@/components/pilotage/review-status-form";
+import { pilotageDate } from "@/lib/services/pilotage-service";
 
 type RisksPageProps = {
   searchParams?: Promise<{
     search?: string;
+    projectId?: string;
     status?: string;
     criticality?: string;
   }>;
@@ -24,6 +28,7 @@ export default async function RisksPage({ searchParams: searchParamsPromise }: R
   const [risks, projects, vendors] = await Promise.all([
     listRisks({
       search: searchParams?.search,
+      projectId: typeof searchParams?.projectId === "string" ? searchParams.projectId : undefined,
       status: isRiskStatus(searchParams?.status) ? searchParams.status : undefined,
       criticality: isRiskLevel(searchParams?.criticality) ? searchParams.criticality : undefined
     }),
@@ -31,7 +36,7 @@ export default async function RisksPage({ searchParams: searchParamsPromise }: R
     prisma.vendor.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } })
   ]);
 
-  const openCritical = risks.filter((risk) => risk.status !== "CLOSED" && (risk.criticality === "HIGH" || risk.criticality === "CRITICAL")).length;
+  const openCritical = risks.filter((risk) => ["OPEN", "MITIGATING"].includes(risk.status) && ["HIGH", "CRITICAL"].includes(risk.criticality)).length;
 
   return (
     <div className="space-y-4">
@@ -57,58 +62,46 @@ export default async function RisksPage({ searchParams: searchParamsPromise }: R
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.55fr),440px]">
-        <section className="space-y-4">
+        <section className="min-w-0 space-y-4">
           <form className="workbench-toolbar" action="/risks">
+            {searchParams?.projectId && <input type="hidden" name="projectId" value={searchParams.projectId} />}
             <input name="search" defaultValue={searchParams?.search ?? ""} placeholder="Rechercher" className="field-input" />
             <select name="status" defaultValue={searchParams?.status ?? ""} className="field-select">
               <option value="">Tous les statuts</option>
-              {RISK_STATUSES.map((status) => <option key={status} value={status}>{status}</option>)}
+              {RISK_STATUSES.map((status) => <option key={status} value={status}>{riskStatusLabels[status]}</option>)}
             </select>
             <select name="criticality" defaultValue={searchParams?.criticality ?? ""} className="field-select">
               <option value="">Toutes criticités</option>
-              {RISK_LEVELS.map((level) => <option key={level} value={level}>{level}</option>)}
+              {RISK_LEVELS.map((level) => <option key={level} value={level}>{riskLevelLabels[level]}</option>)}
             </select>
             <button className="button-secondary">Filtrer</button>
           </form>
 
-          <div className="workbench-table-shell">
-            <table className="workbench-table">
-              <thead>
-                <tr>
-                  <th>Risque</th>
-                  <th>Criticité</th>
-                  <th>Statut</th>
-                  <th>Responsable</th>
-                  <th>Projet</th>
-                  <th>Mitigation</th>
-                </tr>
-              </thead>
-              <tbody>
-                {risks.map((risk) => (
-                  <tr id={risk.id} key={risk.id}>
-                    <td>
-                      <p className="font-medium text-slate-900">{risk.title}</p>
-                      <p className="mt-1 line-clamp-2 text-xs text-slate-500">{risk.description ?? "—"}</p>
-                    </td>
-                    <td>{risk.criticality}</td>
-                    <td>{risk.status}</td>
-                    <td>{risk.ownerName ?? "—"}</td>
-                    <td>{risk.project?.title ?? "—"}</td>
-                    <td className="max-w-[260px]">{risk.mitigation ?? "—"}</td>
-                  </tr>
-                ))}
-                {risks.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="text-slate-500">Aucun risque.</td>
-                  </tr>
-                ) : null}
-              </tbody>
-            </table>
+          <div className="grid gap-3">
+            {risks.map((risk) => (
+              <article id={risk.id} key={risk.id} className="workbench-panel min-w-0 space-y-3 break-words">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <h2 className="font-semibold text-slate-950">{risk.title}</h2>
+                    <p className="mt-1 text-xs text-slate-600">
+                      {[risk.project?.title, risk.ownerName || "Sans responsable", risk.dueDate && pilotageDate(risk.dueDate)].filter(Boolean).join(" · ")}
+                    </p>
+                  </div>
+                  <span className="pilot-status" data-status={risk.criticality === "CRITICAL" ? "BLOCKED" : undefined}>
+                    {riskLevelLabels[risk.criticality as keyof typeof riskLevelLabels] ?? risk.criticality}
+                  </span>
+                </div>
+                {risk.description && <p className="text-sm text-slate-600">{risk.description}</p>}
+                {risk.mitigation && <p className="text-sm text-slate-700"><strong>Mesure de réduction du risque</strong><br />{risk.mitigation}</p>}
+                <ReviewStatusForm kind="risk" id={risk.id} status={risk.status} labels={riskStatusLabels} />
+              </article>
+            ))}
+            {!risks.length && <p className="workbench-panel text-sm text-slate-600">Aucun risque.</p>}
           </div>
         </section>
 
-        <aside className="workbench-panel xl:sticky xl:top-4 xl:self-start">
-          <RiskForm projects={projects} vendors={vendors} />
+        <aside id="nouveau-risque" className="workbench-panel min-w-0 xl:sticky xl:top-4 xl:self-start">
+          <RiskForm key={searchParams?.projectId} projects={projects} vendors={vendors} initialProjectId={projects.find((project) => project.id === searchParams?.projectId)?.id} />
         </aside>
       </div>
     </div>

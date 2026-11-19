@@ -12,19 +12,19 @@ export const aiIntakeReviewQueueSchema = z.object({
   providerModel: z.string().min(1),
   summary: z.string().trim().optional().nullable(),
   suggestedModules: z.array(intakeModuleSchema).default([]),
-  analysis: z.record(z.unknown()).optional().nullable(),
+  analysis: z.record(z.string(), z.unknown()).optional().nullable(),
   reviewReason: z.string().trim().optional().nullable()
 });
 
 export const aiIntakeReviewUpdateSchema = z.object({
   selectedModule: intakeModuleSchema,
-  draftData: z.record(z.unknown())
+  draftData: z.record(z.string(), z.unknown())
 });
 
 export const aiIntakeReviewResolveSchema = z.object({
   action: z.enum(["approve", "reject"]),
   selectedModule: intakeModuleSchema.optional(),
-  draftData: z.record(z.unknown()).optional()
+  draftData: z.record(z.string(), z.unknown()).optional()
 });
 
 export const aiIntakeReviewSuggestSchema = z.object({

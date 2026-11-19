@@ -29,3 +29,7 @@ export const projectTypeLabels: Record<string, string> = {
   SUPPORT: "Support",
   INFRASTRUCTURE: "Infrastructure"
 };
+
+export const riskStatusLabels = { OPEN: "Ouvert", MITIGATING: "En traitement", ACCEPTED: "Accepté", CLOSED: "Clôturé" };
+export const decisionStatusLabels = { PENDING: "À arbitrer", APPROVED: "Approuvée", REJECTED: "Rejetée", DEFERRED: "Reportée" };
+export const riskLevelLabels = { LOW: "Faible", MEDIUM: "Moyenne", HIGH: "Élevée", CRITICAL: "Critique" };

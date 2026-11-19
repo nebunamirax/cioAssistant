@@ -2,14 +2,7 @@
 
 import Link from "next/link";
 import { useRef, useState } from "react";
-
-type ProviderInfo = {
-  provider: string;
-  label: string;
-  mode: string;
-  model: string;
-  location: "local" | "cloud";
-};
+import type { AssistantMessageResponse } from "@/lib/services/assistant-message-service";
 
 type AssistantOperation = {
   id: string;
@@ -24,50 +17,13 @@ type ChatMessage = {
   id: string;
   role: "assistant" | "user";
   text: string;
-  status?: "processing" | "created" | "review";
+  status?: "processing" | AssistantMessageResponse["assistantMessage"]["status"];
   statusLabel?: string;
   sourceName?: string | null;
   summary?: string;
-  provider?: ProviderInfo;
+  provider?: AssistantMessageResponse["assistantMessage"]["provider"];
   operations?: AssistantOperation[];
-};
-
-type AssistantApiResponse = {
-  userMessage: {
-    id: string;
-    role: "user";
-    text: string;
-    sourceName: string | null;
-  };
-  assistantMessage: {
-    id: string;
-    role: "assistant";
-    status: "created" | "review";
-    statusLabel: string;
-    summary: string;
-    content: string;
-    provider: ProviderInfo;
-  };
-  operations: Array<{
-    id: string;
-    module: string;
-    title: string;
-    status: "created" | "review";
-    href: string | null;
-    description: string;
-  }>;
-  created: Array<{
-    id: string;
-    module: string;
-    title: string;
-    href: string;
-  }>;
-  reviews: Array<{
-    id: string;
-    reason: string;
-    selectedModule: string;
-    href: string;
-  }>;
+  links?: AssistantMessageResponse["links"];
 };
 
 function createMessageId() {
@@ -171,6 +127,16 @@ function AssistantMessageList({ messages }: { messages: ChatMessage[] }) {
               </p>
             ) : null}
           </div>
+          {message.links?.length ? (
+            <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-slate-700">
+              {message.links.map((link) => (
+                <li key={link.href}>
+                  <Link href={link.href} className="pilot-row-link">{link.title}</Link>
+                  {link.detail && <span> · {link.detail}</span>}
+                </li>
+              ))}
+            </ul>
+          ) : null}
           {message.operations?.length ? (
             <div className="mt-4 space-y-3">
               {message.operations.map((operation) => (
@@ -219,7 +185,7 @@ function AssistantComposer({
           value={text}
           onChange={(event) => setText(event.target.value)}
           className="field-textarea min-h-[132px]"
-          placeholder="Ex. Crée le projet Migration SSO et ajoute une action pour préparer le pilote."
+          placeholder="Ex. Quels sont les projets en cours ?"
         />
       </div>
       <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
@@ -254,8 +220,8 @@ export function AssistantChat() {
 
   const submit = async ({ file, text }: { text: string; file: File | null }) => {
     const trimmedText = text.trim();
-    if (!file && trimmedText.length < 10) {
-      setError("Ajoute un texte plus descriptif ou un document.");
+    if (!file && !trimmedText) {
+      setError("Ajoute un message ou un document.");
       return false;
     }
 
@@ -276,7 +242,7 @@ export function AssistantChat() {
       {
         id: processingMessageId,
         role: "assistant",
-        text: "Je traite la demande et je prepare les operations detectees.",
+        text: "Je traite ta demande.",
         status: "processing",
         statusLabel: "Analyse en cours"
       }
@@ -303,7 +269,7 @@ export function AssistantChat() {
         return false;
       }
 
-      const data = payload.data as AssistantApiResponse;
+      const data = payload.data as AssistantMessageResponse;
       const assistantMessage: ChatMessage = {
         id: data.assistantMessage.id,
         role: "assistant",
@@ -312,7 +278,8 @@ export function AssistantChat() {
         statusLabel: data.assistantMessage.statusLabel,
         summary: data.assistantMessage.summary,
         provider: data.assistantMessage.provider,
-        operations: data.operations
+        operations: data.operations,
+        links: data.links
       };
 
       setMessages((current) => current.map((message) => (message.id === processingMessageId ? assistantMessage : message)));

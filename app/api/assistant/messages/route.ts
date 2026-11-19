@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { extractTextFromFile } from "@/lib/services/document-text-extractor";
 import { ingestAIIntake } from "@/lib/services/ai-intake-service";
-import { buildAssistantMessageResponse } from "@/lib/services/assistant-message-service";
+import { answerAssistantProjectQuestion, buildAssistantMessageResponse } from "@/lib/services/assistant-message-service";
 
 export async function POST(request: Request) {
   try {
@@ -17,6 +17,9 @@ export async function POST(request: Request) {
       const extractedText = await extractTextFromFile(file);
       normalizedText = [text, extractedText.trim()].filter(Boolean).join("\n\n");
       sourceName = fallbackSourceName ?? file.name;
+    } else if (!sourceName) {
+      const answer = await answerAssistantProjectQuestion(text);
+      if (answer) return NextResponse.json({ data: answer }, { headers: { "Cache-Control": "no-store" } });
     }
 
     const result = await ingestAIIntake({

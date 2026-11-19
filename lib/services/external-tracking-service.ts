@@ -46,14 +46,15 @@ export function listProjectExternalItems(projectId: string, sourceId?: string, s
   });
 }
 
-export function listExternalAttention(now = new Date(), take: number | undefined = 10) {
+export function listExternalAttention(now = new Date(), take: number | null = 10) {
+  const context = { select: { id: true, title: true, owner: { select: { name: true } } } };
   return prisma.externalItem.findMany({
     where: {
       status: { not: "DONE" }, OR: [{ status: "BLOCKED" }, { dueDate: { lt: now } }, { major: true }]
     },
-    include: { source: { include: { project: { select: { id: true, title: true } }, service: { select: { id: true, title: true } } } } },
+    include: { source: { include: { project: context, service: context } } },
     orderBy: [{ dueDate: { sort: "asc", nulls: "last" } }, { title: "asc" }],
-    take
+    take: take ?? undefined
   });
 }
 

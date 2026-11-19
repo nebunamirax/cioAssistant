@@ -1,3 +1,4 @@
+import { patchSchema } from "@/lib/validation/patch-schema";
 import { type Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { riskFilterSchema, riskSchema, type RiskFilters, type RiskInput } from "@/lib/validation/risk";
@@ -61,7 +62,7 @@ export async function createRisk(payload: RiskInput, db: Prisma.TransactionClien
 
 
 export async function updateRisk(id: string, payload: unknown, db: Prisma.TransactionClient = prisma) {
-  const patch = riskSchema.partial().strict().parse(payload);
+  const patch = patchSchema(riskSchema).strict().parse(payload);
   const existing = await db.risk.findUniqueOrThrow({ where: { id } });
   const data = buildRiskCreateData(riskSchema.parse({
     ...existing,

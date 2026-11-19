@@ -97,6 +97,7 @@ export async function getProjectById(id: string) {
       objective: { select: { id: true, title: true } },
       emails: { select: { id: true, subject: true }, orderBy: { receivedAt: "desc" }, take: 5 },
       actions: {
+        include: { owner: { select: { name: true } } },
         orderBy: [{ dueDate: "asc" }, { createdAt: "desc" }],
         take: 10
       },

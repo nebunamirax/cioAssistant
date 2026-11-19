@@ -66,16 +66,49 @@ Connecter le DSI avec le secours, puis autoriser les membres depuis **Équipe** 
 
 ## Claude Desktop
 
-1. Dans CIO Assistant, ouvrez **Paramètres → Intégrations → Claude**, téléchargez `cio-assistant.mcpb` et créez un jeton dédié au poste. Copiez le jeton au moment de sa création.
+1. Dans CIO Assistant, ouvrez **Paramètres → Intégrations → Assistants IA**, téléchargez `cio-assistant.mcpb` et créez un jeton dédié au poste. Copiez le jeton au moment de sa création.
 2. Dans Claude Desktop, ouvrez **Paramètres → Application de bureau → Extensions → Gérer → Paramètres avancés → Installer une extension**, puis sélectionnez le fichier téléchargé. Pour une extension déjà installée, installez le paquet mis à jour. [Extensions locales de Claude Desktop](https://support.claude.com/en/articles/10949351-getting-started-with-local-mcp-servers-on-claude-desktop)
 3. Collez le jeton et l’adresse affichée dans CIO Assistant. Utilisez `http://localhost:3000` lorsque Docker et Claude Desktop tournent sur le même PC. Pour une instance partagée, utilisez son adresse HTTPS et, si le certificat est signé par une PKI interne, ajoutez le fichier PEM de l’autorité.
 4. Dans une conversation Claude, ouvrez **+ → Connecteurs** et vérifiez que **CIO Assistant** apparaît. Essayez « Consulte la roadmap de CIO Assistant et résume les prochains jalons des projets actifs. »
 
 Le paquet privé généré par Docker est non signé. Si l’installation est bloquée par la politique Claude Desktop du poste, demandez à l’administrateur Claude de l’autoriser. [Gestion des extensions en entreprise](https://support.claude.com/en/articles/10949351-getting-started-with-local-mcp-servers-on-claude-desktop)
 
-Le connecteur parle MCP sur `stdio` et appelle `POST /api/v1/business`. Il peut lire la roadmap et les fiches, modifier les projets, jalons et actions, ou enregistrer un compte rendu avec ses actions, risques et décisions en une transaction. Les outils d’écriture demandent une clé d’idempotence. Un rejeu avec la même clé et la même requête renvoie les identifiants et liens initiaux. Une ambiguïté de projet ou de responsable renvoie les candidats. Les jetons prennent les droits actifs de leur titulaire DSI à chaque appel. Pour renouveler un jeton, créez son remplaçant, renseignez-le dans Claude, puis révoquez l’ancien dans CIO Assistant.
+Le connecteur parle MCP sur `stdio` et appelle `POST /api/v1/business`. `lire_cockpit` renvoie les mêmes priorités que le tableau de bord, avec les liens vers les fiches. Sélectionnez **Lecture seule** pour les synthèses et **Lecture et modification des fiches** pour mettre à jour des projets, des jalons et des actions ou enregistrer un compte rendu avec ses actions, risques et décisions en une transaction.
+
+Les nouveaux jetons expirent au bout de 90 jours. Les jetons antérieurs à la version 1.2 conservent leurs droits d’écriture et leur durée d’origine. Pour renouveler un jeton, créez son remplaçant, renseignez-le dans Claude, puis révoquez l’ancien dans CIO Assistant. Les droits du titulaire DSI sont vérifiés à chaque appel. Les outils d’écriture demandent une clé d’idempotence. Un rejeu avec la même clé et la même requête renvoie les identifiants et liens initiaux. Une ambiguïté de projet ou de responsable renvoie les candidats.
 
 Pour une recette conversationnelle, utiliser un projet et un texte fictifs. Demander « Enregistre ce compte rendu dans le projet X, crée une action de suivi, un risque et une décision liée, puis donne-moi les liens ». Demander ensuite une modification de l’action, vérifier le cockpit et révoquer le jeton de test.
+
+Pour utiliser les pages et leurs vues liées, connecter ChatGPT ou déployer PostgreSQL, suivez le [guide de l’espace de travail](espace-de-travail.md).
+
+## Démontrer le produit sur des données fictives
+
+Ce projet Compose utilise un volume dédié à la démo et écoute sur le port 3082. Depuis Bash ou Zsh, lancez les commandes suivantes. La base d’exemple place ses échéances autour du jour du chargement.
+
+```bash
+export CIO_HTTP_PORT=3082 CIO_PUBLIC_URL=http://localhost:3082 AI_PROVIDER_MODE=local
+docker compose -p cio-demo up -d --build app
+```
+
+Une fois la page de connexion accessible sur [localhost:3082](http://localhost:3082), chargez les fiches fictives et créez le compte local.
+
+```bash
+docker compose -p cio-demo exec app npm run prisma:seed
+printf 'Mot de passe de démonstration (16 caractères minimum) : '
+stty -echo
+IFS= read -r cio_demo_password
+stty echo
+printf '\n'
+printf '%s' "$cio_demo_password" | docker compose -p cio-demo exec -T app ./node_modules/.bin/tsx scripts/account.ts local
+unset cio_demo_password
+```
+
+1. Ouvrez [le cockpit de démonstration](http://localhost:3082), filtrez les urgences puis ouvrez l’arbitrage ERP. Passez-le à **Approuvée** et retrouvez la mise à jour dans la revue.
+2. Dans **Assistant → Compte rendu**, sélectionnez **Modernisation ERP finance**. Collez `- Préparer le support du COPIL`, analysez le texte, puis validez la création proposée. Ouvrez l’action à partir du résultat.
+3. Depuis **Revue hebdo**, exportez le brief. Ouvrez ensuite **Préparer le CODIR** pour voir le rapport de direction.
+4. Installez l’extension avec l’adresse de démonstration et demandez à Claude de résumer les urgences. Avec un jeton de pilotage, demandez-lui de passer l’action de préparation du COPIL à **En cours** puis contrôlez le statut dans CIO Assistant.
+
+Arrêtez la démo avec `docker compose -p cio-demo down`. Le volume dédié reste disponible pour la prochaine présentation.
 
 ## Sauvegarde et restauration
 

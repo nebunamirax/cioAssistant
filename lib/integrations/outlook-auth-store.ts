@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { writeDataFile } from "@/lib/settings/shared-data";
 
 export type OutlookConnection = {
   accessToken: string;
@@ -13,12 +14,6 @@ export type OutlookConnection = {
 
 const dataDirectory = path.join(process.cwd(), ".data");
 const outlookConnectionPath = path.join(dataDirectory, "outlook-connection.json");
-
-function ensureDataDirectory() {
-  if (!fs.existsSync(dataDirectory)) {
-    fs.mkdirSync(dataDirectory, { recursive: true });
-  }
-}
 
 export function loadOutlookConnectionSync(): OutlookConnection | null {
   try {
@@ -34,8 +29,7 @@ export function loadOutlookConnectionSync(): OutlookConnection | null {
 }
 
 export async function saveOutlookConnection(connection: OutlookConnection) {
-  ensureDataDirectory();
-  await fs.promises.writeFile(outlookConnectionPath, `${JSON.stringify(connection, null, 2)}\n`, "utf-8");
+  await writeDataFile(outlookConnectionPath, `${JSON.stringify(connection, null, 2)}\n`);
   return connection;
 }
 

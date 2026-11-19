@@ -4,6 +4,8 @@ import { prisma } from "@/lib/db/prisma";
 export async function GET() {
   if ((await currentMember())?.role !== "DSI") return new Response(null, { status: 403 });
   const records = await prisma.$transaction(async (db) => ({
+    workspacePages: await db.workspacePage.findMany(),
+    workspaceRevisions: await db.workspaceRevision.findMany(),
     members: await db.user.findMany({ select: { id: true, name: true, email: true, role: true } }),
     objectives: await db.strategicObjective.findMany(),
     projects: await db.project.findMany(),

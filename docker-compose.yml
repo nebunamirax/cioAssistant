@@ -14,6 +14,8 @@ services:
     environment:
       DATABASE_URL: file:/app/.data/cioassistant.db
       CIO_PUBLIC_URL: ${CIO_PUBLIC_URL:-http://localhost:${CIO_HTTP_PORT:-3000}}
+      CIO_MCP_HTTP_ENABLED: ${CIO_MCP_HTTP_ENABLED:-false}
+      CIO_SHARED_APP_DATA: ${CIO_SHARED_APP_DATA:-false}
       ENTRA_TENANT_ID: ${ENTRA_TENANT_ID:-}
       ENTRA_CLIENT_ID: ${ENTRA_CLIENT_ID:-}
       ENTRA_CLIENT_SECRET: ${ENTRA_CLIENT_SECRET:-}

@@ -2,10 +2,14 @@ import { DecisionForm } from "@/components/decisions/decision-form";
 import { prisma } from "@/lib/db/prisma";
 import { DECISION_STATUSES } from "@/lib/domain/constants";
 import { listDecisions, parseDecisionOptions } from "@/lib/services/decision-service";
+import { decisionStatusLabels } from "@/lib/domain/display-labels";
+import { pilotageDate } from "@/lib/services/pilotage-service";
+import { ReviewStatusForm } from "@/components/pilotage/review-status-form";
 
 type DecisionsPageProps = {
   searchParams?: Promise<{
     search?: string;
+    projectId?: string;
     status?: string;
   }>;
 };
@@ -19,6 +23,7 @@ export default async function DecisionsPage({ searchParams: searchParamsPromise 
   const [decisions, projects] = await Promise.all([
     listDecisions({
       search: searchParams?.search,
+      projectId: typeof searchParams?.projectId === "string" ? searchParams.projectId : undefined,
       status: isDecisionStatus(searchParams?.status) ? searchParams.status : undefined
     }),
     prisma.project.findMany({ select: { id: true, title: true }, orderBy: { title: "asc" } })
@@ -56,10 +61,11 @@ export default async function DecisionsPage({ searchParams: searchParamsPromise 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.55fr),440px]">
         <section className="space-y-4">
           <form className="workbench-toolbar-compact" action="/decisions">
+            {searchParams?.projectId && <input type="hidden" name="projectId" value={searchParams.projectId} />}
             <input name="search" defaultValue={searchParams?.search ?? ""} placeholder="Rechercher" className="field-input" />
             <select name="status" defaultValue={searchParams?.status ?? ""} className="field-select">
               <option value="">Tous les statuts</option>
-              {DECISION_STATUSES.map((status) => <option key={status} value={status}>{status}</option>)}
+              {DECISION_STATUSES.map((status) => <option key={status} value={status}>{decisionStatusLabels[status]}</option>)}
             </select>
             <button className="button-secondary">Filtrer</button>
           </form>
@@ -71,12 +77,11 @@ export default async function DecisionsPage({ searchParams: searchParamsPromise 
                 <article id={decision.id} key={decision.id} className="workbench-panel space-y-3">
                   <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                     <div>
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">{decision.status}</p>
                       <h2 className="mt-1 text-base font-semibold text-slate-950">{decision.subject}</h2>
                       <p className="mt-1 text-sm text-slate-600">{decision.context ?? "Aucun contexte détaillé."}</p>
                     </div>
                     <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
-                      {decision.targetDate ? new Intl.DateTimeFormat("fr-FR").format(decision.targetDate) : "Date non fixée"}
+                      {decision.targetDate ? pilotageDate(decision.targetDate) : "Date non fixée"}
                     </div>
                   </div>
                   {options.length > 0 ? (
@@ -91,6 +96,7 @@ export default async function DecisionsPage({ searchParams: searchParamsPromise 
                     <p className="text-sm text-slate-700"><strong>Décideur:</strong> {decision.decider ?? "—"}</p>
                     <p className="text-sm text-slate-700"><strong>Projet:</strong> {decision.project?.title ?? "—"}</p>
                   </div>
+                  <ReviewStatusForm kind="decision" id={decision.id} status={decision.status} labels={decisionStatusLabels} />
                 </article>
               );
             })}
@@ -100,8 +106,8 @@ export default async function DecisionsPage({ searchParams: searchParamsPromise 
           </div>
         </section>
 
-        <aside className="workbench-panel xl:sticky xl:top-4 xl:self-start">
-          <DecisionForm projects={projects} />
+        <aside id="nouvelle-decision" className="workbench-panel xl:sticky xl:top-4 xl:self-start">
+          <DecisionForm key={searchParams?.projectId} projects={projects} initialProjectId={projects.find((project) => project.id === searchParams?.projectId)?.id} />
         </aside>
       </div>
     </div>

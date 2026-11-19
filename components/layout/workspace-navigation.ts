@@ -4,6 +4,7 @@ type WorkspaceLink = { label: string; href: string; icon: WorkspaceIconName; sha
 
 export const primaryLinks: WorkspaceLink[] = [
   { label: "Aujourd’hui", href: "/", icon: "home" },
+  { label: "Espace de travail", href: "/workspace", icon: "document" },
   { label: "Roadmap", href: "/roadmap", icon: "roadmap", shared: true },
   { label: "Projets", href: "/projects", icon: "folder" },
   { label: "Actions", href: "/actions", icon: "check", shared: true },
@@ -28,6 +29,12 @@ export const toolLinks: WorkspaceLink[] = [
 
 export const settingsLink: WorkspaceLink = { label: "Paramètres", href: "/settings", icon: "settings" };
 export const suggestionsLink: WorkspaceLink = { label: "Suggestions à valider", href: "/ai-reviews", icon: "sparkles" };
+
+export const workspaceToolGroups = [
+  { label: "Gouvernance", icon: "flag", routes: ["/strategy", "/team", "/risks", "/decisions", "/reports"] },
+  { label: "Exploitation", icon: "folder", routes: ["/services", "/vendors", "/contracts", "/budget"] },
+  { label: "Échanges", icon: "mail", routes: ["/emails", "/meetings", "/communications"] }
+] satisfies { label: string; icon: WorkspaceIconName; routes: string[] }[];
 
 export function workspaceLinks(links: WorkspaceLink[], role: string) {
   return role === "DSI" ? links : links.filter((link) => link.shared);

@@ -1,11 +1,14 @@
 import { storeMilestone } from "../mutations";
-import { actionLabels, priorityLabels, projectLabels, projectTypeLabels } from "@/lib/domain/display-labels";
+import { actionLabels, decisionStatusLabels, priorityLabels, projectLabels, projectTypeLabels, riskStatusLabels } from "@/lib/domain/display-labels";
 import { ACTION_STATUSES } from "@/lib/domain/constants";
 import Link from "next/link";
 import { prisma } from "@/lib/db/prisma";
 import { getProjectById } from "@/lib/services/project-service";
 import { ExternalProjectTracking } from "@/components/pilotage/external-project-tracking";
 import { notFound } from "next/navigation";
+import { listDecisions } from "@/lib/services/decision-service";
+import { listRisks } from "@/lib/services/risk-service";
+import { pilotageDate } from "@/lib/services/pilotage-service";
 
 function formatDate(value: Date | null) {
   return value ? new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium", timeStyle: "short" }).format(value) : "—";
@@ -14,12 +17,15 @@ function formatDate(value: Date | null) {
 export default async function ProjectDetailPage({ params: paramsPromise, searchParams: searchParamsPromise }: { params: Promise<{ id: string }>; searchParams?: Promise<{ source?: string; status?: string }> }) {
   const params = await paramsPromise;
   const searchParams = await searchParamsPromise;
-  const [project, owners] = await Promise.all([
+  const [project, owners, decisions, risks] = await Promise.all([
     getProjectById(params.id),
-    prisma.user.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } })
+    prisma.user.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } }),
+    listDecisions({ projectId: params.id }),
+    listRisks({ projectId: params.id })
   ]);
 
   if (!project) return notFound();
+  const projectQuery = `projectId=${encodeURIComponent(project.id)}`;
 
   return (
     <div className="space-y-4">
@@ -78,18 +84,46 @@ export default async function ProjectDetailPage({ params: paramsPromise, searchP
 
       <div className="grid gap-4 xl:grid-cols-2">
         <section className="rounded-lg border border-slate-200 bg-white p-4">
-          <h2 className="mb-3 font-semibold">Actions liées</h2>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="font-semibold">Actions liées</h2>
+            <Link href={`/actions?${projectQuery}&new=1`} className="button-secondary">Créer une action</Link>
+          </div>
           <div className="space-y-2 text-sm text-slate-700">
             {project.actions.map((action) => (
               <p key={action.id}>
-                <Link href={`/actions/${action.id}`} className="font-medium text-slate-900 hover:underline">
+                <Link href={`/actions?${projectQuery}&selectedId=${encodeURIComponent(action.id)}`} className="pilot-row-link">
                   {action.title}
                 </Link>{" "}
-                · {actionLabels[action.status] ?? action.status}
+                · {actionLabels[action.status] ?? action.status} · {action.owner?.name ?? action.ownerName ?? "Sans responsable"} · {pilotageDate(action.dueDate)}
               </p>
             ))}
             {project.actions.length === 0 && <p className="text-slate-500">Aucune action liée.</p>}
+            {project._count.actions > project.actions.length && <Link href={`/actions?${projectQuery}`} className="pilot-row-link">Voir les {project._count.actions} actions</Link>}
           </div>
+        </section>
+
+        <section className="workbench-panel space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="panel-title">Décisions liées</h2>
+            <Link href={`/decisions?${projectQuery}#nouvelle-decision`} className="button-secondary">Créer une décision</Link>
+          </div>
+          {decisions.map((decision) => <p key={decision.id} className="text-sm text-slate-700">
+            <Link href={`/decisions?${projectQuery}#${encodeURIComponent(decision.id)}`} className="pilot-row-link">{decision.subject}</Link>
+            {" · "}{decisionStatusLabels[decision.status as keyof typeof decisionStatusLabels] ?? decision.status} · {decision.decider ?? "Sans décideur"} · {pilotageDate(decision.targetDate)}
+          </p>)}
+          {!decisions.length && <p className="text-sm text-slate-500">Aucune décision liée.</p>}
+        </section>
+
+        <section className="workbench-panel space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="panel-title">Risques liés</h2>
+            <Link href={`/risks?${projectQuery}#nouveau-risque`} className="button-secondary">Créer un risque</Link>
+          </div>
+          {risks.map((risk) => <p key={risk.id} className="text-sm text-slate-700">
+            <Link href={`/risks?${projectQuery}#${encodeURIComponent(risk.id)}`} className="pilot-row-link">{risk.title}</Link>
+            {" · "}{riskStatusLabels[risk.status as keyof typeof riskStatusLabels] ?? risk.status} · {risk.ownerName ?? "Sans responsable"} · {pilotageDate(risk.dueDate)}
+          </p>)}
+          {!risks.length && <p className="text-sm text-slate-500">Aucun risque lié.</p>}
         </section>
 
         <section className="rounded-lg border border-slate-200 bg-white p-4">

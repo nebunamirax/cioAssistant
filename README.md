@@ -2,7 +2,9 @@
 
 [Installation sur un PC Windows avec Docker et Claude Desktop](docs/pilotage-partage.md#installer-sur-le-pc-du-bureau) · [Déploiement partagé et connexion Microsoft](docs/pilotage-partage.md#mettre-à-jour-linstance-existante)
 
-Application partagée pour piloter la DSI et répartir le suivi opérationnel. Le cockpit regroupe le portefeuille, les actions en retard ou bloquées, les risques et les arbitrages. La stratégie relie les objectifs aux projets. La vue Équipe répartit les actions ouvertes par responsable.
+Application de pilotage pour les DSI et les PMO. Le cockpit classe les actions, arbitrages, risques critiques, contrôles, préavis et alertes externes. Un compte rendu peut devenir une liste de modifications à valider dans le portefeuille. La revue hebdomadaire s’exporte en Markdown avec les liens vers les fiches.
+
+L’espace de travail intégré réunit les pages en blocs, les sous-pages et des vues liées aux fiches métier. Claude Desktop et les clients MCP HTTP consultent et modifient ces mêmes pages et fiches. L’éditeur BlockNote Community est gratuit sous MPL 2.0. [Utiliser l’espace de travail et PostgreSQL](docs/espace-de-travail.md) · [Installer l’extension Claude Desktop](docs/pilotage-partage.md#claude-desktop)
 
 ## Stack
 - Next.js App Router + TypeScript
@@ -165,13 +167,12 @@ docs/
 - Les réponses du chat reviennent aujourd'hui avec une sémantique conversationnelle stable via `POST /api/assistant/messages`, incluant message utilisateur, message assistant, opérations créées et éventuelles revues.
 
 ## Démarrage
+
 ```bash
-cp .env.example .env
-npm install
-npx prisma generate
-npx prisma migrate dev --name init
-npm run dev
+docker compose up -d --build app
 ```
+
+Pour initialiser le premier compte DSI, suivez la procédure de [mise en service Docker](docs/pilotage-partage.md#installer-sur-le-pc-du-bureau).
 
 ## Transcription audio locale
 Pour le moteur embarqué directement dans l’app, la config minimale attendue est:

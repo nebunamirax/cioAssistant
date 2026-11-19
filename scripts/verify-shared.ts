@@ -9,6 +9,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { prisma } from "../lib/db/prisma";
 import { allowedMonths, archiveMonthly, monthBounds, reportContent, reportFingerprint, saveMonthlyDraft } from "../lib/services/monthly-report-service";
 import { saveExternalItems } from "../lib/services/external-tracking-service";
@@ -22,7 +23,7 @@ const command = "./node_modules/.bin/tsx";
 function runInstance(https: boolean, directory: string) {
   const plain = https ? "http://127.0.0.1:3000" : "http://localhost:3080";
   const url = https ? "https://localhost:3443" : plain;
-  const env = { ...process.env, CIO_PUBLIC_URL: url, ENTRA_TENANT_ID: "", ENTRA_CLIENT_ID: "", ENTRA_CLIENT_SECRET: "" };
+  const env = { ...process.env, CIO_PUBLIC_URL: url, CIO_MCP_HTTP_ENABLED: "true", ENTRA_TENANT_ID: "", ENTRA_CLIENT_ID: "", ENTRA_CLIENT_SECRET: "" };
   const caFile = join(directory, "certificate.pem");
   const keyFile = join(directory, "key.pem");
   let tls: ReturnType<typeof createServer> | undefined;
@@ -95,10 +96,12 @@ async function login({ app, url }: Instance, candidate: string) {
   return app("/api/auth/local", { method: "POST", headers: { Origin: url }, body: new URLSearchParams({ password: candidate }) });
 }
 
-async function createToken(app: Instance["app"], headers: HeadersInit) {
-  const response = await app("/api/integrations/claude", { method: "POST", headers, body: JSON.stringify({ label: "Recette MCP" }) });
+async function createToken(app: Instance["app"], headers: HeadersInit, scope: "PILOTAGE" | "LECTURE" = "PILOTAGE") {
+  const response = await app("/api/integrations/claude", { method: "POST", headers, body: JSON.stringify({ label: "Recette MCP", scope }) });
   assert.equal(response.status, 201);
-  return (await response.json()).token as string;
+  const { token, expiresAt } = await response.json();
+  assert(Date.parse(expiresAt) > Date.now());
+  return token as string;
 }
 
 async function call(client: Client, name: string, args: Record<string, unknown>, error = false) {
@@ -147,6 +150,26 @@ async function verifyShared(directory: string) {
     assert.deepEqual((await prisma.action.findUniqueOrThrow({ where: { id: own.id } })).completedAt, initialClose);
 
     const project = await prisma.project.create({ data: { title: "Recette projet", type: "SUPPORT", status: "ACTIVE" } });
+    const askAboutProjects = (text: string, headers?: HeadersInit) => {
+      const body = new FormData();
+      body.set("text", text);
+      return app("/api/assistant/messages", { method: "POST", headers, body });
+    };
+    const projectQuestion = "tu peux me dire quels sont les projets ?";
+    const chatHeaders = { Cookie: session, Origin: url };
+    assert.equal((await askAboutProjects(projectQuestion)).status, 401);
+    assert.equal((await askAboutProjects(projectQuestion, { ...chatHeaders, Cookie: restricted.Cookie })).status, 403);
+    const projectsReply = await askAboutProjects(projectQuestion, chatHeaders);
+    assert.equal(projectsReply.status, 200);
+    const { data: projectList } = await projectsReply.json();
+    assert.equal(projectList.assistantMessage.status, "answered");
+    assert(projectList.links.some((link: { href: string }) => link.href === `/projects/${project.id}`));
+    assert.deepEqual(projectList.operations, []);
+    const projectReply = await askAboutProjects("Où en est le projet Recette projet ?", chatHeaders);
+    assert.equal(projectReply.status, 200);
+    const { data: projectDetails } = await projectReply.json();
+    assert.match(projectDetails.assistantMessage.content, /Recette projet.*En cours/);
+    assert.equal(projectDetails.links.length, 1);
     const service = await prisma.supportService.create({ data: { title: "Recette service", criticality: "CRITICAL" } });
     const control = await app(`/api/services/${service.id}/controls`, { method: "POST", headers: { Cookie: restricted.Cookie, Origin: url },
       body: new URLSearchParams({ checkedAt: "2026-01-01", nextDueAt: "2026-01-05", result: "ANOMALY", evidence: "Résultat recette" }) });
@@ -170,10 +193,10 @@ async function verifyShared(directory: string) {
     const token = await createToken(app, dsi);
     ({ client } = await launchExtension(app, dsi, directory, url, token, caFile));
     const tools = await client.listTools();
-    assert.equal(tools.tools.length, 34);
+    assert.equal(tools.tools.length, 39);
     const batch = {
       key: "meeting-recipe-1", meeting: { title: "Réunion de recette MCP", rawContent: "Compte rendu de recette.", projectId: project.id, meetingDate: new Date().toISOString() },
-      actions: [{ title: "Action de recette liée", ownerId: apprentice.id, status: "BLOCKED" }],
+      actions: [{ title: "Action de recette liée", ownerId: apprentice.id, status: "BLOCKED", priority: "CRITICAL" }],
       risks: [{ title: "Risque de recette lié" }], decisions: [{ subject: "Décision de recette liée" }]
     };
     const first = await call(client, "enregistrer_compte_rendu", batch);
@@ -185,8 +208,23 @@ async function verifyShared(directory: string) {
       assert.equal(row.data.meetingNoteId, meeting.id);
       assert(row.url.startsWith(url));
     }
-    await call(client, "modifier_action", { key: "action-recipe-1", id: action.id, fields: { title: "Action modifiée par MCP" } });
+    const { data: actionBefore } = await call(client, "consulter_fiche", { entity: "action", id: action.id });
+    const updateArgs = { key: "action-recipe-1", id: action.id, expectedVersion: actionBefore.version, fields: { title: "Action modifiée par MCP" } };
+    const actionUpdate = await call(client, "modifier_action", updateArgs);
+    assert.deepEqual(await call(client, "modifier_action", updateArgs), actionUpdate);
+    assert.equal(actionUpdate.data.saved[0].data.status, "BLOCKED");
+    assert.equal(actionUpdate.data.saved[0].data.priority, "CRITICAL");
     assert((await (await app("/", { headers: dsi })).text()).includes("Action modifiée par MCP"));
+    const { data: cockpit } = await call(client, "lire_cockpit", { urgency: "urgent", limit: 50 });
+    const urgent = cockpit.items.find((item: { id: string }) => item.id === action.id);
+    assert.equal(urgent?.title, "Action modifiée par MCP");
+    assert.equal(urgent?.url, `${url}/actions?selectedId=${action.id}`);
+    assert(cockpit.items.every((item: { urgency: string }) => item.urgency === "urgent"));
+    assert.equal(cockpit.counts.urgent, cockpit.matchingItems);
+    const weekly = await app("/api/reports/markdown?type=weekly", { headers: dsi });
+    assert.equal(weekly.status, 200);
+    assert((await weekly.text()).includes(`[${urgent.title}](${urgent.url})`));
+    assert.equal((await app("/api/reports/markdown?type=weekly", { headers: restricted })).status, 403);
     await prisma.project.create({ data: { title: "Recette projet homonyme", type: "SUPPORT" } });
     const ambiguous = await call(client, "enregistrer_compte_rendu", { ...batch, key: "ambiguous-recipe", meeting: { ...batch.meeting, projectId: null, projectName: "Recette projet" } }, true);
     assert.equal(ambiguous.candidates.length, 2);
@@ -244,7 +282,24 @@ async function verifyLocal(directory: string) {
       key: "local-meeting-1", meeting: { title: "Réunion locale", rawContent: "Valider le pilote et prévenir l’équipe.", projectId, meetingDate: new Date().toISOString() },
       actions: [{ title: "Valider le pilote local", dueDate: "2027-01-09T09:00:00Z" }, { title: "Prévenir l’équipe" }]
     });
-    await call(client, "modifier_action", { key: "local-action-1", id: batch.saved[1].id, fields: { status: "DONE" } });
+    const actionId = batch.saved[1].id;
+    const { data: before } = await call(client, "consulter_fiche", { entity: "action", id: actionId });
+    const mcpUrl = new URL("/api/mcp", url);
+    assert.equal((await app("/api/mcp")).status, 401);
+    assert.equal((await app("/api/mcp", { headers: { Origin: "https://other.example", Authorization: `Bearer ${token}` } })).status, 403);
+    const http = new Client({ name: "recette-mcp-http", version: "1.0.0" });
+    try {
+      await http.connect(new StreamableHTTPClientTransport(mcpUrl, { requestInit: { headers: { Authorization: `Bearer ${token}` } } }));
+      assert((await http.listTools()).tools.some((tool) => tool.name === "modifier_action"));
+      await call(http, "modifier_action", { key: "local-action-1", id: actionId, expectedVersion: before.version, fields: { status: "DONE" } });
+      const conflict = await call(client, "modifier_action", {
+        key: "local-action-conflict", id: actionId, expectedVersion: before.version, fields: { status: "TODO" }
+      }, true);
+      assert.match(conflict.error, /fiche a changé/);
+      await verifyWorkspace(app, dsi, client, http, projectId, actionId);
+    } finally {
+      await http.close();
+    }
     const { data: portfolio } = await call(client, "lire_roadmap", { status: "ACTIVE", limit: 100 });
     assert(portfolio.projects.some((project: { id: string }) => project.id === projectId));
     const { data: plan } = await call(client, "lire_roadmap", { projectId, limit: 1 });
@@ -257,6 +312,24 @@ async function verifyLocal(directory: string) {
     assert.equal(next.actions[0].title, "Prévenir l’équipe");
     assert.equal(next.nextOffset, null);
 
+    const readOnlyToken = await createToken(app, dsi, "LECTURE");
+    const readOnly = (await launchExtension(app, dsi, directory, url, readOnlyToken)).client;
+    const readOnlyHttp = new Client({ name: "recette-lecture-mcp-http", version: "1.0.0" });
+    try {
+      await readOnlyHttp.connect(new StreamableHTTPClientTransport(mcpUrl, { requestInit: { headers: { Authorization: `Bearer ${readOnlyToken}` } } }));
+      assert((await readOnlyHttp.listTools()).tools.every((tool) => tool.annotations?.readOnlyHint));
+      await call(readOnly, "lire_cockpit", { limit: 1 });
+      const { data: current } = await call(readOnly, "consulter_fiche", { entity: "action", id: actionId });
+      const denied = await call(readOnly, "modifier_action", { key: "local-denied-1", id: actionId, expectedVersion: current.version, fields: { status: "TODO" } }, true);
+      assert.match(denied.error, /limité à la lecture/);
+      assert.equal((await prisma.action.findUniqueOrThrow({ where: { id: batch.saved[1].id } })).status, "DONE");
+      await prisma.claudeToken.update({ where: { hash: hash(readOnlyToken) }, data: { expiresAt: new Date(0) } });
+      assert.match((await call(readOnly, "lire_cockpit", {}, true)).error, /expiré/);
+    } finally {
+      await readOnly.close();
+      await readOnlyHttp.close();
+    }
+
     for (const origin of ["http://127.0.0.1:3080", "http://[::1]:3080", "https://pilotage.intra.example"]) assert(claudeOrigin(origin));
     for (const origin of ["http://127.example.test", "http://192.168.0.10", "http://localhost/fiche", "http://localhost/?", "http://localhost/#", "http://agent:secret@localhost", "file:///tmp/cio"]) assert.equal(claudeOrigin(origin), null);
     const rejected = spawnSync(extension.node, extension.args, {
@@ -264,15 +337,67 @@ async function verifyLocal(directory: string) {
     });
     assert.equal(rejected.status, 1);
     assert.match(rejected.stderr, /localhost:3000/);
-    console.log("Recette Docker locale réussie · extension téléchargée, lecture roadmap et écritures MCP sur localhost en HTTP.");
+    console.log("Recette unifiée réussie · pages, blocs, vues liées, sous-pages, historique, conflits inter-clients et droits MCP HTTP/stdio.");
   } finally {
     await client?.close();
     await instance.close();
   }
 }
 
+async function verifyWorkspace(app: Instance["app"], headers: HeadersInit, local: Client, http: Client, projectId: string, actionId: string) {
+  const stableViewId = "8f82a992-1052-4a56-8b17-c55dd801098a";
+  const view = { id: stableViewId, title: "Actions du projet", entity: "action", projectId, layout: "kanban", status: "", query: "" };
+  const body = { key: "workspace-create-1", fields: { title: "Pilotage unifié", contentMarkdown: "# Suivi partagé\n\nÀ relire ensemble.", views: [view] } };
+  const created = await app("/api/workspace/pages", { method: "POST", headers, body: JSON.stringify(body) });
+  assert.equal(created.status, 201, await created.clone().text());
+  const { data: page } = await created.json();
+  assert.deepEqual((await (await app("/api/workspace/pages", { method: "POST", headers, body: JSON.stringify(body) })).json()).data, page);
+  assert.equal(await prisma.workspacePage.count(), 1);
+  const { data: read } = await call(local, "consulter_fiche", { entity: "page", id: page.id });
+  assert.equal(read.version, page.version);
+  assert(Array.isArray(read.data.contentBlocks));
+  assert(read.data.contentBlocks.length > 0);
+  const { data: live } = await call(http, "lire_vue", { pageId: page.id, viewId: stableViewId });
+  assert.equal(live.total, 2);
+  const before = await app("/api/workspace/pages/" + page.id + "/views/" + stableViewId, { headers });
+  assert.deepEqual((await before.json()).data, live);
+  const changedAction = await app("/api/actions/" + actionId, {
+    method: "PATCH", headers, body: JSON.stringify({ title: "Action actualisée dans une page" })
+  });
+  assert(changedAction.ok);
+  const { data: actual } = await call(local, "lire_vue", { pageId: page.id, viewId: stableViewId });
+  assert(actual.items.some((item: { title: string }) => item.title === "Action actualisée dans une page"));
+  assert.equal(await prisma.action.count({ where: { projectId } }), 2);
+  const { data: child } = await call(http, "creer_page", { key: "workspace-child-1", fields: { title: "Compte rendu", parentId: page.id, contentMarkdown: "Sous-page liée au projet." } });
+  const childId = child.saved[0].id;
+  assert.equal((await call(local, "rechercher_pages", { parentId: page.id })).data.items[0].id, childId);
+  const updated = await call(http, "modifier_page", { key: "workspace-edit-1", id: page.id, expectedVersion: read.version, fields: { contentMarkdown: "# Suivi actualisé\n\nÉcriture depuis un autre assistant." } });
+  assert.equal(updated.data.saved[0].data.revision, 2);
+  const stale = await app("/api/workspace/pages/" + page.id, { method: "PATCH", headers, body: JSON.stringify({ key: "workspace-stale-1", expectedVersion: read.version, fields: body.fields }) });
+  assert.equal(stale.status, 409);
+  const fresh = await call(local, "consulter_fiche", { entity: "page", id: page.id });
+  const loop = await call(local, "modifier_page", { key: "workspace-loop-1", id: page.id, expectedVersion: fresh.data.version, fields: { parentId: childId } }, true);
+  assert.match(loop.error, /boucle/);
+  const exportResponse = await app("/api/workspace/pages/" + page.id + "/export?revision=1", { headers });
+  assert.equal(exportResponse.status, 200);
+  assert.match(await exportResponse.text(), /Suivi partagé/);
+  assert.equal(await prisma.workspaceRevision.count({ where: { pageId: page.id } }), 2);
+  const listed = await app("/workspace", { headers });
+  assert.equal(listed.status, 200);
+  assert((await listed.text()).includes("Pilotage unifié"));
+  const detail = await app("/workspace/" + page.id, { headers });
+  assert.equal(detail.status, 200);
+  assert((await detail.text()).includes("Compte rendu"));
+  assert.equal((await app("/api/workspace/pages/" + page.id)).status, 401);
+  const apprentice = await prisma.user.findFirstOrThrow({ where: { role: "APPRENTI" } });
+  const restrictedToken = randomBytes(32).toString("base64url");
+  await prisma.session.create({ data: { hash: hash(restrictedToken), userId: apprentice.id, expiresAt: new Date(Date.now() + 60000) } });
+  assert.equal((await app("/api/workspace/pages/" + page.id, { headers: { Cookie: "cio_session=" + restrictedToken } })).status, 403);
+}
+
 async function main() {
-  assert(process.env.DATABASE_URL?.startsWith("file:/tmp/"), "Use a disposable database.");
+  assert(process.env.DATABASE_URL?.startsWith("file:/tmp/") ||
+    (process.env.CIO_VERIFY_POSTGRES === "true" && new URL(process.env.DATABASE_URL || "").pathname === "/cio_recipe"), "Use a disposable database.");
   execFileSync(command, ["scripts/account.ts", "local"], { input: password });
   const directory = mkdtempSync(join(tmpdir(), "CIO Desktop "));
   try {

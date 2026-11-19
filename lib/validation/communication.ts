@@ -1,3 +1,4 @@
+import { patchSchema } from "./patch-schema";
 import { COMMUNICATION_STATUSES } from "@/lib/domain/constants";
 import { COMMUNICATION_TEMPLATE_KEYS } from "@/lib/communications/templates";
 import { z } from "zod";
@@ -7,7 +8,7 @@ export const communicationBaseSchema = z.object({
   type: z.string().optional().nullable(),
   status: z.enum(COMMUNICATION_STATUSES).default("DRAFT"),
   templateKey: z.enum(COMMUNICATION_TEMPLATE_KEYS).optional().nullable(),
-  templateInputData: z.record(z.string()).optional().nullable(),
+  templateInputData: z.record(z.string(), z.string()).optional().nullable(),
   contentText: z.string().optional().nullable(),
   contentMarkdown: z.string().optional().nullable(),
   projectId: z.string().optional().nullable(),
@@ -31,7 +32,7 @@ export const communicationSchema = communicationBaseSchema.superRefine((value, c
   });
 });
 
-export const communicationUpdateSchema = communicationBaseSchema.partial().extend({
+export const communicationUpdateSchema = patchSchema(communicationBaseSchema).extend({
   title: z.string().min(3).optional()
 }).refine((value) => Object.keys(value).length > 0, {
   message: "At least one field must be provided"

@@ -12,6 +12,7 @@ import { projectSchema } from "@/lib/validation/project";
 import { riskSchema } from "@/lib/validation/risk";
 import { controlFields, serviceFields } from "@/lib/validation/support";
 import { vendorBaseSchema } from "@/lib/validation/vendor";
+import { workspacePageFields } from "@/lib/validation/workspace";
 
 const name = z.string().trim().min(1).max(250).optional();
 const action = actionSchema.extend({ projectName: name });
@@ -28,14 +29,16 @@ export const entities = {
   budget: budgetItemSchema.extend({ projectName: name }),
   meeting,
   communication: communicationBaseSchema.extend({ projectName: name }),
-  report: reportFields
+  report: reportFields,
+  page: workspacePageFields
 };
 
-const names = ["objective", "project", "milestone", "action", "service", "control", "risk", "decision", "vendor", "contract", "budget", "meeting", "communication", "report", "member"] as const;
+const names = ["objective", "project", "milestone", "action", "service", "control", "risk", "decision", "vendor", "contract", "budget", "meeting", "communication", "report", "page", "member"] as const;
 export const entityName = z.enum(names);
 export type EntityName = z.infer<typeof entityName>;
 export const keyField = z.string().min(8).max(120).describe("Clé stable pour cette écriture. Réutiliser la même clé lors d’un nouvel essai.");
 export const idField = z.string().min(1).max(250);
+export const versionField = z.string().regex(/^[a-f0-9]{64}$/).describe("Version renvoyée par consulter_fiche avant la modification.");
 export const searchFields = z.object({
   entity: entityName, query: z.string().max(250).optional(), cursor: idField.optional(), limit: z.number().int().min(1).max(100).default(20)
 }).strict();
@@ -48,6 +51,10 @@ export const meetingBatch = z.object({
   decisions: z.array(decision.strict()).max(40).default([])
 }).strict();
 export const reviewFields = z.object({ category: z.string().max(80).optional(), owner: name }).strict();
+export const cockpitFields = z.object({
+  urgency: z.enum(["urgent", "attention"]).optional(),
+  limit: z.number().int().min(1).max(50).default(10)
+}).strict();
 export const roadmapFields = z.object({
   projectId: idField.optional(),
   status: z.enum(PROJECT_STATUSES).optional(),

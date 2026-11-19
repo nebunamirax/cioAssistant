@@ -2,10 +2,18 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { WorkspaceIcon } from "@/components/ui/workspace-icon";
+import { WorkspaceIcon, type WorkspaceIconName } from "@/components/ui/workspace-icon";
 import { primaryLinks, settingsLink, suggestionsLink, toolLinks, workspaceLinks } from "./workspace-navigation";
 
-type SearchResult = { title: string; detail: string; kind: "project" | "action"; href: string };
+const resultIcons = {
+  project: "folder",
+  action: "check",
+  page: "document",
+  decision: "decision",
+  risk: "alert"
+} satisfies Record<string, WorkspaceIconName>;
+
+type SearchResult = { title: string; detail: string; kind: keyof typeof resultIcons; href: string };
 
 function normalize(value: string) {
   return value.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLocaleLowerCase("fr");
@@ -32,7 +40,7 @@ export function WorkspaceSearch({ role }: { role: string }) {
   const currentLookup = lookup?.query === value ? lookup : null;
   const results = [
     ...matches.map((link) => ({ ...link, title: link.label, detail: "Navigation" })),
-    ...(currentLookup?.results ?? []).map((item) => ({ ...item, icon: item.kind === "project" ? "folder" as const : "check" as const }))
+    ...(currentLookup?.results ?? []).map((item) => ({ ...item, icon: resultIcons[item.kind] }))
   ];
 
   function show() {
@@ -79,7 +87,7 @@ export function WorkspaceSearch({ role }: { role: string }) {
 
   return (
     <>
-      <button type="button" className="workspace-search-trigger" aria-label="Rechercher un projet ou une action" aria-haspopup="dialog" onClick={show}>
+      <button type="button" className="workspace-search-trigger" aria-label="Ouvrir la recherche globale" aria-haspopup="dialog" onClick={show}>
         <WorkspaceIcon name="search" />
         <span className="hidden sm:inline">Rechercher…</span>
         <kbd className="workspace-key hidden md:inline">⌘ K</kbd>
@@ -100,8 +108,8 @@ export function WorkspaceSearch({ role }: { role: string }) {
             ref={input}
             type="text"
             maxLength={120}
-            placeholder="Rechercher un projet, une action…"
-            aria-label="Rechercher un projet, une action"
+            placeholder="Rechercher dans l’espace de travail…"
+            aria-label="Rechercher dans l’espace de travail"
             aria-controls="workspace-search-results"
             aria-expanded={open}
             role="combobox"

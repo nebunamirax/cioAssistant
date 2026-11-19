@@ -2,7 +2,7 @@
   "manifest_version": "0.3",
   "name": "cio-assistant",
   "display_name": "CIO Assistant",
-  "version": "1.1.0",
+  "version": "1.4.0",
   "description": "Consulter et tenir à jour le pilotage DSI depuis Claude Desktop.",
   "author": { "name": "CIO Assistant" },
   "compatibility": { "runtimes": { "node": ">=20.19.0" } },
@@ -21,7 +21,7 @@
   },
   "user_config": {
     "cio_url": { "type": "string", "title": "Adresse de CIO Assistant", "description": "Utilisez http://localhost:3000 sur le même poste ou l’origine HTTPS de l’instance partagée.", "required": true, "default": "http://localhost:3000" },
-    "cio_token": { "type": "string", "title": "Jeton Claude", "description": "Jeton créé dans Paramètres → Intégrations → Claude.", "required": true, "sensitive": true },
+    "cio_token": { "type": "string", "title": "Jeton CIO Assistant", "description": "Jeton créé dans Paramètres → Intégrations → Assistants IA.", "required": true, "sensitive": true },
     "ca_file": { "type": "file", "title": "Autorité de certification interne", "description": "Certificat PEM de l’autorité interne si le serveur utilise une PKI d’entreprise.", "required": false }
   }
 }

@@ -1,3 +1,5 @@
+import { patchSchema } from "@/lib/validation/patch-schema";
+import { z } from "zod";
 import {
   getIntakeDraftSchema,
   intakeExecutionPlanSchema,
@@ -412,7 +414,7 @@ If a field is unknown, omit it.`
 
     const content = extractMessageContent(payload);
     const normalized = normalizeDraftPayload(module, extractJsonObject(content), input.text);
-    return getIntakeDraftSchema(module).partial().parse(normalized);
+    return patchSchema(getIntakeDraftSchema(module) as z.ZodObject).parse(normalized);
   }
 
   private async plainTextTask(input: AIRequest, instruction: string, task: AIResult["task"]) {

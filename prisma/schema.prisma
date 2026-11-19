@@ -388,6 +388,8 @@ model ClaudeToken {
   userId String
   createdAt DateTime @default(now())
   revokedAt DateTime?
+  scope String @default("PILOTAGE")
+  expiresAt DateTime?
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
@@ -438,4 +440,39 @@ model PmoImport {
   plan       String
   result     String?
   createdAt  DateTime @default(now())
+}
+
+model WorkspacePage {
+  id              String   @id @default(cuid())
+  title           String
+  parentId        String?
+  parent          WorkspacePage? @relation("WorkspaceTree", fields: [parentId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  children        WorkspacePage[] @relation("WorkspaceTree")
+  contentMarkdown String   @default("")
+  blocksJson      String   @default("[]")
+  viewsJson       String   @default("[]")
+  revision        Int      @default(1)
+  editedById      String
+  editedByName    String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  revisions       WorkspaceRevision[]
+  @@index([parentId, title, id])
+  @@index([updatedAt, id])
+}
+
+model WorkspaceRevision {
+  id              String   @id @default(cuid())
+  pageId          String
+  page            WorkspacePage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  revision        Int
+  title           String
+  parentId        String?
+  contentMarkdown String
+  blocksJson      String
+  viewsJson       String
+  authorId        String
+  authorName      String
+  createdAt       DateTime @default(now())
+  @@unique([pageId, revision])
 }

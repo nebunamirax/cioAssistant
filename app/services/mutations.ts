@@ -2,6 +2,7 @@
 
 import { requireMember } from "@/lib/auth/session";
 import { prisma } from "@/lib/db/prisma";
+import { lockWrites } from "@/lib/db/write-transaction";
 import { followUp, saveService } from "@/lib/services/support-service";
 import { redirect } from "next/navigation";
 
@@ -20,8 +21,7 @@ export async function createFollowUp(form: FormData) {
   const ticketId = String(form.get("ticketId") ?? "") || undefined;
   if (!serviceId && !ticketId) throw new Error("Service ou ticket requis.");
   const action = await prisma.$transaction(async (db) => {
-    // Acquire a writer lock before reading the source.
-    await db.$executeRaw`UPDATE "Action" SET "id" = "id" WHERE 0`;
+    await lockWrites(db);
     return followUp(db, actor, serviceId, ticketId);
   });
   redirect(`/actions?selectedId=${action.id}`);
