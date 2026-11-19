@@ -26,7 +26,10 @@ export default async function ServicePage({ params }: { params: Promise<{ id: st
     </header>
     <div className="grid gap-4 lg:grid-cols-2">
       <section className="workbench-panel space-y-2">
-        <h2 className="panel-title">Fiche service</h2>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="panel-title">Fiche service</h2>
+          {member.role === "DSI" && <Link className="pilot-row-link text-sm" href={`/cmdb?serviceId=${encodeURIComponent(id)}`}>Éléments dans la CMDB</Link>}
+        </div>
         {[[ "Responsable", service.owner?.name ], [ "Criticité", service.criticality ], [ "Prestataire", service.vendor?.name ], [ "Contrat", service.contract?.title ], [ "Périmètre", service.scope ], [ "Contact d’escalade", service.escalationContact ], [ "Procédure", service.procedure ], [ "Notes", service.notes ]].map(([label, value]) =>
           <div key={label}><strong>{label}</strong><p className="whitespace-pre-wrap">{value ?? "—"}</p></div>)}
       </section>

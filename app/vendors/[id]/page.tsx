@@ -36,6 +36,7 @@ export default async function VendorDetailPage({ params: paramsPromise }: { para
         />
         <section className="space-y-3 rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-700">
           <h2 className="font-semibold text-slate-900">Synthèse</h2>
+          <Link className="pilot-row-link" href={`/cmdb?vendorId=${encodeURIComponent(vendor.id)}`}>Éléments dans la CMDB</Link>
           <p><strong>Contrats:</strong> {vendor._count.contracts}</p>
           <p><strong>Actions:</strong> {vendor._count.actions}</p>
           <p><strong>Services:</strong> {vendor._count.supportServices}</p>

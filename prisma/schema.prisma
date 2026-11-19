@@ -103,6 +103,7 @@ model Vendor {
   budgetItems      BudgetItem[]
   actions          Action[]
   risks            Risk[]
+  configurationItems ConfigurationItem[]
 }
 
 model Contract {
@@ -148,6 +149,7 @@ model SupportService {
   updatedAt  DateTime  @updatedAt
   vendor     Vendor?   @relation(fields: [vendorId], references: [id])
   contract   Contract? @relation(fields: [contractId], references: [id])
+  configurationItems ConfigurationItem[]
 }
 
 model BudgetItem {
@@ -475,4 +477,39 @@ model WorkspaceRevision {
   authorName      String
   createdAt       DateTime @default(now())
   @@unique([pageId, revision])
+}
+
+model ConfigurationItem {
+  id          String @id @default(cuid())
+  name        String
+  reference   String? @unique
+  type        String
+  status      String @default("ACTIVE")
+  environment String @default("PRODUCTION")
+  criticality String @default("STANDARD")
+  owner       String?
+  description String?
+  serviceId   String?
+  vendorId    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  service     SupportService? @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+  vendor      Vendor? @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+  outgoing    ConfigurationRelation[] @relation("ConfigurationSource")
+  incoming    ConfigurationRelation[] @relation("ConfigurationTarget")
+
+  @@index([serviceId])
+  @@index([vendorId])
+}
+
+model ConfigurationRelation {
+  id       String @id @default(cuid())
+  sourceId String
+  targetId String
+  type     String
+  source   ConfigurationItem @relation("ConfigurationSource", fields: [sourceId], references: [id], onDelete: Cascade)
+  target   ConfigurationItem @relation("ConfigurationTarget", fields: [targetId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceId, targetId, type])
+  @@index([targetId])
 }

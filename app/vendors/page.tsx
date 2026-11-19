@@ -141,6 +141,7 @@ export default async function VendorsPage({ searchParams: searchParamsPromise }:
           {selectedVendor && (
             <section className="workbench-panel panel-stat-list">
               <h3 className="panel-title">Synthèse</h3>
+              <Link className="pilot-row-link" href={`/cmdb?vendorId=${encodeURIComponent(selectedVendor.id)}`}>Éléments dans la CMDB</Link>
               <p><strong>Contrats:</strong> {selectedVendor._count.contracts}</p>
               <p><strong>Actions:</strong> {selectedVendor._count.actions}</p>
               <p><strong>Services:</strong> {selectedVendor._count.supportServices}</p>

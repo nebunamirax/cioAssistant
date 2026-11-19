@@ -16,6 +16,7 @@ export const toolLinks: WorkspaceLink[] = [
   { label: "Stratégie", href: "/strategy", icon: "flag" },
   { label: "Équipe", href: "/team", icon: "check" },
   { label: "Services", href: "/services", icon: "folder", shared: true },
+  { label: "CMDB", href: "/cmdb", icon: "list" },
   { label: "Risques", href: "/risks", icon: "alert" },
   { label: "Décisions", href: "/decisions", icon: "decision" },
   { label: "Rapports", href: "/reports", icon: "document" },
@@ -32,7 +33,7 @@ export const suggestionsLink: WorkspaceLink = { label: "Suggestions à valider",
 
 export const workspaceToolGroups = [
   { label: "Gouvernance", icon: "flag", routes: ["/strategy", "/team", "/risks", "/decisions", "/reports"] },
-  { label: "Exploitation", icon: "folder", routes: ["/services", "/vendors", "/contracts", "/budget"] },
+  { label: "Exploitation", icon: "folder", routes: ["/services", "/cmdb", "/vendors", "/contracts", "/budget"] },
   { label: "Échanges", icon: "mail", routes: ["/emails", "/meetings", "/communications"] }
 ] satisfies { label: string; icon: WorkspaceIconName; routes: string[] }[];
 

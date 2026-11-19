@@ -13,6 +13,8 @@ export async function GET() {
     actions: await db.action.findMany(),
     notes: await db.note.findMany(),
     services: await db.supportService.findMany(),
+    configurationItems: await db.configurationItem.findMany(),
+    configurationRelations: await db.configurationRelation.findMany(),
     controls: await db.serviceControl.findMany(),
     risks: await db.risk.findMany(),
     decisions: await db.decision.findMany(),
