@@ -8,7 +8,7 @@ export const primaryLinks: WorkspaceLink[] = [
   { label: "Roadmap", href: "/roadmap", icon: "roadmap", shared: true },
   { label: "Projets", href: "/projects", icon: "folder" },
   { label: "Actions", href: "/actions", icon: "check", shared: true },
-  { label: "Revue hebdo", href: "/weekly-review", icon: "review", shared: true },
+  { label: "Revue hebdomadaire", href: "/weekly-review", icon: "review", shared: true },
   { label: "Assistant", href: "/assistant", icon: "sparkles" }
 ];
 

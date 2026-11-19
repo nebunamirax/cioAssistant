@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { WorkspaceIcon } from "@/components/ui/workspace-icon";
 import { actionLabels, priorityLabels, projectLabels } from "@/lib/domain/display-labels";
 import type { PmoApplied, PmoPreview } from "@/lib/services/pmo-intake-service";
@@ -37,6 +37,8 @@ async function sendIntake<T>(payload: object): Promise<T> {
 
 export function PmoIntakePanel({ projects, initialProject }: { projects: { id: string; title: string }[]; initialProject: string }) {
   const router = useRouter();
+  const resultHeading = useRef<HTMLHeadingElement>(null);
+  const source = useRef<HTMLTextAreaElement>(null);
   const [text, setText] = useState("");
   const [sourceName, setSourceName] = useState("");
   const [projectId, setProjectId] = useState(initialProject);
@@ -49,6 +51,10 @@ export function PmoIntakePanel({ projects, initialProject }: { projects: { id: s
   const example = exampleProject
     ? `Projet ${exampleProject.title} en cours\n- Préparer le support du COPIL pour ${exampleProject.title}`
     : "Projet Migration ERP en cours\n- Préparer le support du COPIL pour Migration ERP";
+
+  useEffect(() => {
+    if (preview || applied || error) resultHeading.current?.focus();
+  }, [preview, applied, error]);
 
   function editInput() {
     setPreview(null);
@@ -107,7 +113,7 @@ export function PmoIntakePanel({ projects, initialProject }: { projects: { id: s
             <div>
               <label htmlFor="pmo-text" className="field-label">Compte rendu ou e-mail</label>
               <textarea
-                id="pmo-text" className="field-textarea min-h-[205px]" value={text} required minLength={10} maxLength={pmoTextLimit} rows={9}
+                id="pmo-text" ref={source} className="field-textarea min-h-[205px]" value={text} required minLength={10} maxLength={pmoTextLimit} rows={9}
                 aria-describedby="pmo-hint" placeholder="Collez ici le texte à transformer en actions et mises à jour."
                 onChange={(event) => { setText(event.target.value); editInput(); }}
               />
@@ -115,7 +121,7 @@ export function PmoIntakePanel({ projects, initialProject }: { projects: { id: s
             </div>
             <div className="flex flex-wrap items-center justify-between gap-3">
               {!text && <button type="button" className="workspace-panel-link" onClick={() => setText(example)}>Insérer un exemple</button>}
-              <button className="button-primary ml-auto gap-2" disabled={text.trim().length < 10 || busy !== null}>
+              <button className={preview || applied ? "button-secondary ml-auto gap-2" : "button-primary ml-auto gap-2"} disabled={text.trim().length < 10 || busy !== null}>
                 <WorkspaceIcon name="sparkles" className="h-4 w-4" />
                 {busy === "preview" ? "Analyse en cours…" : preview ? "Relancer l’analyse" : "Analyser le texte"}
               </button>
@@ -126,8 +132,8 @@ export function PmoIntakePanel({ projects, initialProject }: { projects: { id: s
 
       <section className="pilot-panel min-w-0" aria-labelledby="pmo-preview-title">
         <div className="workspace-panel-heading">
-          <h2 id="pmo-preview-title">{applied ? "Mises à jour appliquées" : "Aperçu des modifications"}</h2>
-          {!applied && preview && preview.proposals.length > 0 && <span className="text-xs text-slate-600">{selected.length}/{preview.proposals.length} sélectionnées</span>}
+          <h2 id="pmo-preview-title" ref={resultHeading} tabIndex={-1} className="scroll-mt-20 focus-visible:rounded focus-visible:outline focus-visible:outline-indigo-500">{applied ? "Mises à jour appliquées" : "Aperçu des modifications"}</h2>
+          {(preview || applied) && <button type="button" className="workspace-panel-link" onClick={() => source.current?.focus()}>Retour au texte</button>}
         </div>
         {error && <p role="alert" className="mx-4 mb-4 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-800">{error}</p>}
         {applied ? (
@@ -145,6 +151,15 @@ export function PmoIntakePanel({ projects, initialProject }: { projects: { id: s
           </>
         ) : preview ? (
           <div className="min-w-0">
+            <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
+              <p role="status" className="text-sm text-slate-700">
+                {selected.length}/{preview.proposals.length} sélectionnées · {preview.clarifications.length} à vérifier
+              </p>
+              {preview.proposals.length > 1 && <button type="button" className="workspace-panel-link" disabled={busy !== null}
+                onClick={() => setSelected(selected.length === preview.proposals.length ? [] : preview.proposals.map(({ id }) => id))}>
+                {selected.length === preview.proposals.length ? "Tout désélectionner" : "Tout sélectionner"}
+              </button>}
+            </div>
             {preview.proposals.length ? (
               <fieldset className="min-w-0 divide-y divide-slate-100" disabled={busy !== null}>
                 <legend className="sr-only">Modifications à appliquer</legend>
@@ -191,7 +206,7 @@ export function PmoIntakePanel({ projects, initialProject }: { projects: { id: s
                 </ul>
               </details>
             )}
-            {preview.id && <div className="workspace-intake-footer">
+            {preview.id && <div className="workspace-intake-footer sticky bottom-0 z-10 bg-white/95 shadow-sm">
               <button type="button" className="button-primary" disabled={busy !== null || !selected.length} onClick={() => { if (preview.id) void apply(preview.id); }}>
                 {busy === "apply" ? "Application en cours…" : selected.length === 1 ? "Appliquer 1 modification" : `Appliquer ${selected.length} modifications`}
               </button>

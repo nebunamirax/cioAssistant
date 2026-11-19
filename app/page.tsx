@@ -42,36 +42,13 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
       <header className="cockpit-hero">
         <div>
           <p className="cockpit-date"><time dateTime={generatedAt.toISOString()}>{dateLabel.format(generatedAt)}</time></p>
-          <h1 className="cockpit-title">Pilotage DSI</h1>
-          <p className="mt-2 max-w-md text-sm text-slate-200 sm:text-base">Priorités du jour, échéances et avancement du portefeuille.</p>
+          <h1 className="cockpit-title">Aujourd’hui</h1>
         </div>
         <div className="flex flex-wrap gap-2 ">
-          <Link href="/workspace" className="cockpit-secondary gap-2"><WorkspaceIcon name="document" className="h-4 w-4" /> Espace de travail</Link>
-          <Link href="/actions?new=1" className="cockpit-secondary gap-2"><WorkspaceIcon name="plus" className="h-4 w-4" /> Nouvelle action</Link>
-          <Link href="/assistant" className="cockpit-primary gap-2"><WorkspaceIcon name="sparkles" className="h-4 w-4" /> Analyser un compte rendu</Link>
+          <Link href="/actions?new=1" className="cockpit-primary gap-2"><WorkspaceIcon name="plus" className="h-4 w-4" /> Nouvelle action</Link>
+          <Link href="/assistant" className="cockpit-secondary gap-2"><WorkspaceIcon name="sparkles" className="h-4 w-4" /> Analyser un compte rendu</Link>
         </div>
       </header>
-
-      <section className="workspace-metrics" aria-label="Indicateurs de pilotage">
-        {metrics.map((metric) => (
-          <Link key={metric.href} href={metric.href} className="workspace-metric" data-tone={metric.tone}>
-            <span className="workspace-metric-icon"><WorkspaceIcon name={metric.icon} /></span>
-            <span className="min-w-0 flex-1">
-              <strong className="workspace-metric-value">{metric.value}</strong>
-              <span className="workspace-metric-label">{metric.label}</span>
-            </span>
-            <WorkspaceIcon name="right" className="workspace-metric-arrow h-4 w-4" />
-          </Link>
-        ))}
-      </section>
-
-      {!projectCount && <section className="cockpit-onboarding" aria-label="Premiers pas">
-        <div>
-          <h2 className="font-semibold text-slate-950">Créez votre premier projet</h2>
-          <p className="mt-1 text-sm text-slate-600">Fixez une échéance et rattachez les actions issues de vos comptes rendus.</p>
-        </div>
-        <Link href="/projects?new=1" className="button-primary gap-2"><WorkspaceIcon name="plus" className="h-4 w-4" /> Nouveau projet</Link>
-      </section>}
 
       <div className="workspace-dashboard-grid">
         <section className="pilot-panel min-w-0" aria-labelledby="priorites-title">
@@ -80,7 +57,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
               <h2 id="priorites-title">À traiter en priorité</h2>
               <p className="mt-0.5 text-xs text-slate-600">{filteredItems.length} {filteredItems.length === 1 ? "point à examiner" : "points à examiner"}</p>
             </div>
-            <Link href={reviewLink} className="workspace-panel-link">Ouvrir la revue <WorkspaceIcon name="arrow" className="h-4 w-4" /></Link>
+            <Link href={reviewLink} className="workspace-panel-link">Revue hebdomadaire <WorkspaceIcon name="arrow" className="h-4 w-4" /></Link>
           </div>
           <nav className="workspace-tabs cockpit-tabs" aria-label="Filtrer les priorités">
             {tabs.map((tab) => <Link key={tab.value} href={tab.value ? `/?focus=${tab.value}#priorites-title` : "/#priorites-title"}
@@ -136,6 +113,27 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
           </section>
         </div>
       </div>
+
+      <section className="workspace-metrics" aria-label="Indicateurs de pilotage">
+        {metrics.map((metric) => (
+          <Link key={metric.href} href={metric.href} className="workspace-metric" data-tone={metric.tone}>
+            <span className="workspace-metric-icon"><WorkspaceIcon name={metric.icon} /></span>
+            <span className="min-w-0 flex-1">
+              <strong className="workspace-metric-value">{metric.value}</strong>
+              <span className="workspace-metric-label">{metric.label}</span>
+            </span>
+            <WorkspaceIcon name="right" className="workspace-metric-arrow h-4 w-4" />
+          </Link>
+        ))}
+      </section>
+
+      {!projectCount && <section className="cockpit-onboarding" aria-label="Premiers pas">
+        <div>
+          <h2 className="font-semibold text-slate-950">Créez votre premier projet</h2>
+          <p className="mt-1 text-sm text-slate-600">Fixez une échéance et rattachez les actions issues de vos comptes rendus.</p>
+        </div>
+        <Link href="/projects?new=1" className="button-primary gap-2"><WorkspaceIcon name="plus" className="h-4 w-4" /> Nouveau projet</Link>
+      </section>}
 
       <section className="pilot-panel">
         <div className="workspace-panel-heading">

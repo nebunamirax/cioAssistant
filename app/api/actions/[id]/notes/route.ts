@@ -11,5 +11,15 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   const content = z.string().trim().min(1).max(5000).safeParse((await request.formData()).get("content"));
   if (!content.success) return new Response("Note invalide", { status: 422 });
   await prisma.note.create({ data: { entityType: "ACTION", entityId: id, title: actor.name, content: content.data } });
-  return Response.redirect(new URL(`/actions?selectedId=${encodeURIComponent(id)}`, publicUrl()), 303);
+  if (request.headers.get("accept") === "application/json") return Response.json({ ok: true }, { status: 201 });
+  const source = new URL(request.url).searchParams;
+  const destination = new URL("/actions", publicUrl());
+  for (const key of ["view", "projectId", "search", "status", "priority", "unassigned", "openOnly", "overdueOnly"]) {
+    const value = source.get(key);
+    if (value) destination.searchParams.set(key, value);
+  }
+  destination.searchParams.set("selectedId", id);
+  destination.searchParams.set("note", "saved");
+  destination.hash = "action-notes";
+  return Response.redirect(destination, 303);
 }

@@ -1,3 +1,4 @@
+import { ActionNoteForm } from "@/components/actions/action-note-form";
 import { requireMember } from "@/lib/auth/session";
 import { prisma } from "@/lib/db/prisma";
 import Link from "next/link";
@@ -21,6 +22,7 @@ type ActionsPageProps = {
     openOnly?: string;
     overdueOnly?: string;
     selectedId?: string;
+    note?: string;
     new?: string;
     view?: string;
   }>;
@@ -129,6 +131,10 @@ export default async function ActionsPage({ searchParams: searchParamsPromise }:
     return query ? `/actions?${query}` : "/actions";
   };
 
+  const closeHref = buildSelectionHref() + (view === "kanban" && selectedAction && actions.some((item) => item.id === selectedAction.id)
+    ? `#action-${encodeURIComponent(selectedAction.id)}` : "#actions-results");
+  const notesQuery = baseParams.toString();
+
   const kanbanActions = actions.map((action) => ({
     id: action.id,
     title: action.title,
@@ -165,14 +171,14 @@ export default async function ActionsPage({ searchParams: searchParamsPromise }:
             </Link>
           </div>
           {panelOpen ? (
-            <Link href={buildSelectionHref()} className="button-secondary">Fermer</Link>
+            <Link href={closeHref} className="button-secondary">Fermer</Link>
           ) : (
             <Link href={buildSelectionHref(undefined, true)} className="button-primary">Nouvelle action</Link>
           )}
         </div>
       </header>
       <div className={panelOpen ? "workspace-split" : "space-y-4"}>
-        <section className="min-w-0 space-y-4">
+        <section className="min-w-0 space-y-4" id="actions-results">
           <ActionFilters key={baseParams.toString()} values={filters} view={view} projects={projectOptions} />
           {view === "kanban" ? (
             <ActionKanbanView
@@ -185,7 +191,7 @@ export default async function ActionsPage({ searchParams: searchParamsPromise }:
             <div className="workbench-table-shell">
               <ul className="workspace-feed border-t-0 sm:hidden" aria-label="Actions">
                 {actions.map((action) => <li key={action.id}>
-                  <Link href={buildSelectionHref(action.id)} className="workspace-feed-row" aria-current={selectedId === action.id ? "true" : undefined}>
+                  <Link href={buildSelectionHref(action.id) + "#action-detail"} className="workspace-feed-row" aria-current={selectedId === action.id ? "true" : undefined}>
                     <span className="workspace-feed-text">
                       <strong>{action.title}</strong>
                       <span>{[action.project?.title, action.owner?.name ?? action.ownerName, action.dueDate && pilotageDate(action.dueDate)].filter(Boolean).join(" · ")}</span>
@@ -210,7 +216,7 @@ export default async function ActionsPage({ searchParams: searchParamsPromise }:
                   {actions.map((action) => (
                     <tr key={action.id} data-selected={selectedId === action.id}>
                       <td>
-                        <Link href={buildSelectionHref(action.id)} className="font-medium text-slate-900 hover:underline">
+                        <Link href={buildSelectionHref(action.id) + "#action-detail"} className="font-medium text-slate-900 hover:underline">
                           {action.title}
                         </Link>
                       </td>
@@ -235,14 +241,13 @@ export default async function ActionsPage({ searchParams: searchParamsPromise }:
         </section>
 
         {panelOpen && <aside className="order-first min-w-0 space-y-4 xl:order-none">
-          <section className="workbench-panel">
+          <section className="workbench-panel" id="action-detail">
             <div className="mb-4 flex items-start justify-between gap-3">
               <div>
                 <h2 className="panel-title">
                   {selectedAction ? canEdit ? "Modifier l’action" : "Détail de l’action" : "Nouvelle action"}
                 </h2>
               </div>
-              {selectedAction && !apprentice && <ActionDeleteButton actionId={selectedAction.id} />}
             </div>
             {!canEdit && selectedAction && <p className="text-sm text-slate-600">{actionLabels[selectedAction.status] ?? selectedAction.status} · {selectedAction.title}</p>}
             {canEdit && <ActionForm key={selectedAction?.id ?? "new"}
@@ -263,17 +268,17 @@ export default async function ActionsPage({ searchParams: searchParamsPromise }:
               } : projectId && !filters.unassigned && projectOptions.some((project) => project.id === projectId) ? { projectId } : undefined}
               showHeader={false}
             />}
+            {selectedAction && !apprentice && <div className="mt-4 border-t border-slate-200 pt-4"><ActionDeleteButton actionId={selectedAction.id} /></div>}
           </section>
 
           {selectedAction && (
-            <section className="workbench-panel panel-stat-list">
+            <section className="workbench-panel panel-stat-list" id="action-notes">
               <h3 className="panel-title">Contexte</h3>
               {selectedAction.sourceUrl && <p><a href={selectedAction.sourceUrl} rel="noreferrer">Ouvrir le ticket d’origine</a></p>}
               {notes.map((note) => <p key={note.id}><strong>{note.title}</strong> · {note.content}</p>)}
-              {canEdit && <form method="post" action={`/api/actions/${selectedAction.id}/notes`}>
-                <label className="field-label">Note <textarea className="field-textarea" name="content" required maxLength={5000} /></label>
-                <button className="button-secondary">Ajouter la note</button>
-              </form>}
+              {canEdit && <ActionNoteForm key={selectedAction.id}
+                action={`/api/actions/${encodeURIComponent(selectedAction.id)}/notes${notesQuery ? `?${notesQuery}` : ""}`}
+                saved={searchParams?.note === "saved"} />}
               <p><strong>Projet:</strong> {selectedAction.project?.title ?? "—"}</p>
               <p><strong>Responsable:</strong> {selectedAction.owner?.name ?? selectedAction.ownerName ?? "—"}</p>
               <p><strong>Fournisseur:</strong> {selectedAction.vendor?.name ?? "—"}</p>

@@ -63,6 +63,9 @@ export default async function RoadmapPage({ searchParams }: { searchParams: Prom
     return `/roadmap?${query}`;
   }
 
+  const agenda = params.display === "agenda";
+  const calendar = params.display === "calendar";
+  if (agenda || calendar) base.set("display", agenda ? "agenda" : "calendar");
   const listHref = roadmapHref({ project: null });
   const actionList = project ? `/actions?projectId=${encodeURIComponent(project.id)}` : "/actions";
   const focusDate = project ? project.targetDate ?? project.startDate ?? project.milestones.find((item) => item.dueDate)?.dueDate ?? actions.find((item) => item.dueDate)?.dueDate : null;
@@ -121,24 +124,35 @@ export default async function RoadmapPage({ searchParams }: { searchParams: Prom
           <form action="/roadmap" key={`${search}|${status}|${objective}`} className="roadmap-filters">
             <input type="hidden" name="month" value={monthKey(anchor)} />
             <input type="hidden" name="span" value={horizon} />
+            {(agenda || calendar) && <input type="hidden" name="display" value={agenda ? "agenda" : "calendar"} />}
             <label className="roadmap-filter-search">
               <WorkspaceIcon name="search" className="h-4 w-4" />
               <input className="field-input" type="search" name="q" defaultValue={search} maxLength={120} aria-label="Rechercher dans la roadmap" placeholder="Projet ou responsable…" />
             </label>
-            <select className="field-select" name="status" defaultValue={status} aria-label="Statut du projet">
-              <option value="open">Projets ouverts</option>
-              <option value="all">Tous les projets</option>
-              {viewStatuses.slice(2).map((item) => <option key={item} value={item}>{projectLabels[item]}</option>)}
-            </select>
-            {objectives.length > 0 && <select className="field-select" name="objective" defaultValue={objective} aria-label="Objectif stratégique">
-              <option value="">Tous les objectifs</option>
-              {objectives.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}
-            </select>}
-            <button className="button-secondary">Filtrer</button>
+            <button className="button-secondary">Rechercher</button>
+            <details className="filter-disclosure">
+              <summary className="button-secondary">Filtres{status !== "open" || objective ? " (actifs)" : ""}</summary>
+              <div className="filter-options">
+                <select className="field-select" name="status" defaultValue={status} aria-label="Statut du projet">
+                  <option value="open">Projets ouverts</option>
+                  <option value="all">Tous les projets</option>
+                  {viewStatuses.slice(2).map((item) => <option key={item} value={item}>{projectLabels[item]}</option>)}
+                </select>
+                {objectives.length > 0 && <select className="field-select" name="objective" defaultValue={objective} aria-label="Objectif stratégique">
+                  <option value="">Tous les objectifs</option>
+                  {objectives.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}
+                </select>}
+                <button className="button-primary">Appliquer les filtres</button>
+              </div>
+            </details>
             {(search || objective || status !== "open") && <Link className="workspace-panel-link" href={roadmapHref({ q: null, status: null, objective: null })}>Réinitialiser</Link>}
           </form>
         )}
-        <div className="roadmap-toolbar">
+        <nav className="flex flex-wrap gap-2 border-b border-slate-200 p-3" aria-label="Affichage de la roadmap">
+          <Link href={roadmapHref({ display: "agenda" })} className={agenda ? "button-primary" : "button-secondary"} aria-current={agenda ? "page" : undefined}>Liste des échéances</Link>
+          <Link href={roadmapHref({ display: "calendar" })} className={calendar ? "button-primary" : "button-secondary"} aria-current={calendar ? "page" : undefined}>Calendrier</Link>
+        </nav>
+        {!agenda && <div className={calendar ? "roadmap-toolbar" : "roadmap-toolbar max-md:hidden"}>
           <div className="flex flex-wrap items-center gap-2.5">
             <div className="workspace-segment" aria-label="Changer de période">
               <Link href={roadmapHref({ month: monthKey(shiftMonths(anchor, -horizon)) })} className="workspace-icon-button" aria-label="Période précédente"><WorkspaceIcon name="left" /></Link>
@@ -153,9 +167,24 @@ export default async function RoadmapPage({ searchParams }: { searchParams: Prom
               <Link key={count} className="workspace-segment-link" href={roadmapHref({ span: String(count) })} aria-current={count === horizon ? "true" : undefined}>{count} mois</Link>
             ))}
           </div>
-        </div>
+        </div>}
         {rows.length > 0 ? (
-          <RoadmapTimeline months={months} rows={rows} today={today} label={project ? "Planning des actions et jalons" : "Calendrier des projets"} />
+          <>
+            {!calendar && <ul className={agenda ? "workspace-feed" : "workspace-feed md:hidden"} aria-label="Liste des échéances">
+              {rows.map((row) => <li key={row.id} id={!dsi && row.kind === "milestone" ? `agenda-${row.id}` : undefined}>
+                <Link href={!dsi && row.kind === "milestone" ? `#agenda-${row.id}` : row.href} className="workspace-feed-row">
+                  <span className="workspace-feed-text">
+                    <strong>{row.title}</strong>
+                    <span>{row.kind === "milestone" ? "Jalon · " : ""}{row.targetDate ? pilotageDate(row.targetDate) : "Sans échéance"}{row.meta ? ` · ${row.meta}` : ""}</span>
+                  </span>
+                  <span className="pilot-status" data-status={row.status}>{row.statusLabel}</span>
+                </Link>
+              </li>)}
+            </ul>}
+            {!agenda && <div className={calendar ? undefined : "hidden md:block"}>
+              <RoadmapTimeline months={months} rows={rows} today={today} label={project ? "Planning des actions et jalons" : "Calendrier des projets"} />
+            </div>}
+          </>
         ) : <p className="workspace-empty">{project ? dsi ? "Ajoutez un jalon depuis la fiche projet ou créez une action pour la planifier." : "Créez une action pour la planifier." : "Aucun projet dans cette vue."}</p>}
         {project ? (
           <div className="roadmap-footer">
@@ -164,7 +193,7 @@ export default async function RoadmapPage({ searchParams }: { searchParams: Prom
           </div>
         ) : (
           <div className="roadmap-footer">
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+            <div className={agenda ? "hidden" : calendar ? "flex flex-wrap items-center gap-x-4 gap-y-1" : "hidden flex-wrap items-center gap-x-4 gap-y-1 md:flex"}>
               <span className="flex items-center gap-1.5"><span className="roadmap-legend-today" /> Aujourd’hui</span>
               <span className="flex items-center gap-1.5"><WorkspaceIcon name="diamond" className="h-3.5 w-3.5 text-amber-700" /> Jalon</span>
             </div>

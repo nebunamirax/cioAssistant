@@ -1,7 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { normalizeSearchText } from "@/lib/domain/search-text";
 import { WorkspaceIcon, type WorkspaceIconName } from "@/components/ui/workspace-icon";
 import { primaryLinks, settingsLink, suggestionsLink, toolLinks, workspaceLinks } from "./workspace-navigation";
 
@@ -10,20 +11,27 @@ const resultIcons = {
   action: "check",
   page: "document",
   decision: "decision",
-  risk: "alert"
+  risk: "alert",
+  service: "folder",
+  cmdb: "list"
 } satisfies Record<string, WorkspaceIconName>;
 
 type SearchResult = { title: string; detail: string; kind: keyof typeof resultIcons; href: string };
 
-function normalize(value: string) {
-  return value.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLocaleLowerCase("fr");
-}
+const resultLabels = {
+  navigation: "Navigation", project: "Projets", action: "Actions", service: "Services",
+  page: "Pages", decision: "Décisions", risk: "Risques", cmdb: "CMDB"
+};
+
+const subscribePlatform = () => () => {};
+const platformShortcut = () => /^Mac|iPhone|iPad/.test(navigator.platform) ? "⌘ K" : "Ctrl K";
 
 export function WorkspaceSearch({ role }: { role: string }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const input = useRef<HTMLInputElement>(null);
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const shortcutLabel = useSyncExternalStore(subscribePlatform, platformShortcut, () => "Ctrl K");
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
   const [lookup, setLookup] = useState<{ query: string; results: SearchResult[]; error?: string } | null>(null);
@@ -36,12 +44,16 @@ export function WorkspaceSearch({ role }: { role: string }) {
     suggestionsLink,
     settingsLink
   ], role);
-  const matches = value ? shortcuts.filter((link) => normalize(link.label).includes(normalize(value))).slice(0, 5) : shortcuts.slice(0, 4);
+  const matches = value ? shortcuts.filter((link) => normalizeSearchText(link.label).includes(normalizeSearchText(value))).slice(0, 5) : shortcuts.slice(0, 4);
   const currentLookup = lookup?.query === value ? lookup : null;
   const results = [
-    ...matches.map((link) => ({ ...link, title: link.label, detail: "Navigation" })),
+    ...matches.map((link) => ({ ...link, title: link.label, detail: "", kind: "navigation" as const })),
     ...(currentLookup?.results ?? []).map((item) => ({ ...item, icon: resultIcons[item.kind] }))
   ];
+
+  const groups = Object.entries(resultLabels).map(([kind, label]) => ({
+    kind, label, entries: results.flatMap((result, index) => result.kind === kind ? [{ result, index }] : [])
+  })).filter(({ entries }) => entries.length);
 
   function show() {
     dialog.current?.showModal();
@@ -90,7 +102,7 @@ export function WorkspaceSearch({ role }: { role: string }) {
       <button type="button" className="workspace-search-trigger" aria-label="Ouvrir la recherche globale" aria-haspopup="dialog" onClick={show}>
         <WorkspaceIcon name="search" />
         <span className="hidden sm:inline">Rechercher…</span>
-        <kbd className="workspace-key hidden md:inline">⌘ K</kbd>
+        <kbd className="workspace-key hidden md:inline">{shortcutLabel}</kbd>
       </button>
       <dialog
         ref={dialog}
@@ -108,8 +120,9 @@ export function WorkspaceSearch({ role }: { role: string }) {
             ref={input}
             type="text"
             maxLength={120}
-            placeholder="Rechercher dans l’espace de travail…"
+            placeholder="Nom d’une fiche ou référence CMDB…"
             aria-label="Rechercher dans l’espace de travail"
+            aria-describedby="workspace-search-scope"
             aria-controls="workspace-search-results"
             aria-expanded={open}
             role="combobox"
@@ -128,14 +141,22 @@ export function WorkspaceSearch({ role }: { role: string }) {
           <button type="button" className="workspace-icon-button" aria-label="Fermer la recherche" onClick={() => dialog.current?.close()}><WorkspaceIcon name="close" /></button>
         </form>
         <div className="workspace-search-body">
+          <p className="workspace-search-message" id="workspace-search-scope">
+            {role === "DSI" ? "Projets, actions, services, pages, décisions, risques et CMDB" : "Projets, actions et services"}
+          </p>
           <div role="listbox" id="workspace-search-results" aria-label="Résultats de recherche">
-            {results.map((result, index) => (
-              <button type="button" key={result.href} id={`workspace-result-${index}`} role="option" aria-selected={active === index} tabIndex={-1} className="workspace-search-result" onMouseEnter={() => setActive(index)} onClick={() => go(result.href)}>
-                <WorkspaceIcon name={result.icon} />
-                <span className="min-w-0 flex-1 truncate text-left font-semibold">{result.title}</span>
-                <span className="hidden max-w-[37%] truncate text-xs text-slate-500 sm:block">{result.detail}</span>
-                <WorkspaceIcon name="right" className="h-3.5 w-3.5" />
-              </button>
+            {groups.map(({ kind, label, entries }) => (
+              <div key={kind} role="group" aria-label={label}>
+                <p aria-hidden="true" className="px-3 pb-1 pt-2 text-xs font-medium text-slate-600">{label}</p>
+                {entries.map(({ result, index }) => (
+                  <button type="button" key={result.href} id={`workspace-result-${index}`} role="option" aria-selected={active === index} tabIndex={-1} className="workspace-search-result" onMouseEnter={() => setActive(index)} onClick={() => go(result.href)}>
+                    <WorkspaceIcon name={result.icon} />
+                    <span className="min-w-0 flex-1 truncate text-left font-semibold">{result.title}</span>
+                    <span className="hidden max-w-[37%] truncate text-xs text-slate-500 sm:block">{result.detail}</span>
+                    <WorkspaceIcon name="right" className="h-3.5 w-3.5" />
+                  </button>
+                ))}
+              </div>
             ))}
           </div>
           {value.length >= 2 && !currentLookup && <p className="workspace-search-message" role="status">Recherche en cours…</p>}

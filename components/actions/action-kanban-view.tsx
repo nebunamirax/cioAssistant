@@ -3,7 +3,7 @@
 import { actionLabels, priorityLabels } from "@/lib/domain/display-labels";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ACTION_STATUSES, type ActionStatus } from "@/lib/domain/constants";
 
 type ActionKanbanItem = {
@@ -56,6 +56,7 @@ function isOverdue(action: ActionKanbanItem, now: number) {
 
 export function ActionKanbanView({ actions, selectedId, baseSearchParams, now }: ActionKanbanViewProps) {
   const router = useRouter();
+  const board = useRef<HTMLDivElement>(null);
   const [items, setItems] = useState(actions);
   const [draggedActionId, setDraggedActionId] = useState<string | null>(null);
   const [pendingActionId, setPendingActionId] = useState<string | null>(null);
@@ -128,10 +129,23 @@ export function ActionKanbanView({ actions, selectedId, baseSearchParams, now }:
           {error}
         </div>
       )}
-      <div className="action-board-shell" tabIndex={0} role="region" aria-label="Kanban des actions">
+      <div role="group" aria-label="Aller à un statut" className="flex flex-wrap gap-1.5 lg:hidden">
+        {ACTION_STATUSES.map((status) => (
+          <button type="button" className="workspace-segment-link border border-slate-200 bg-white"
+            key={status} onClick={() => board.current?.querySelector<HTMLElement>(`[data-column="${status}"]`)?.focus()}>
+            {actionLabels[status]} ({groupedActions[status].length})
+          </button>
+        ))}
+      </div>
+      <div ref={board} className="action-board-shell" tabIndex={0} role="region" aria-label="Kanban des actions">
         {ACTION_STATUSES.map((status) => (
           <div
             key={status}
+            data-column={status}
+            tabIndex={-1}
+            onFocus={(event) => {
+              if (event.target === event.currentTarget) event.currentTarget.scrollIntoView({ block: "nearest", inline: "start" });
+            }}
             onDragOver={(event) => event.preventDefault()}
             onDragEnter={() => setDropTargetStatus(status)}
             onDragLeave={() => {
@@ -164,6 +178,7 @@ export function ActionKanbanView({ actions, selectedId, baseSearchParams, now }:
               {groupedActions[status].map((action) => (
                 <article
                   key={action.id}
+                  id={`action-${action.id}`}
                   draggable={pendingActionId === null}
                   onDragStart={() => setDraggedActionId(action.id)}
                   onDragEnd={() => setDraggedActionId(null)}
@@ -174,7 +189,7 @@ export function ActionKanbanView({ actions, selectedId, baseSearchParams, now }:
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="space-y-2">
-                      <Link href={buildSelectionHref(action.id)} className="block text-sm font-semibold text-slate-950 hover:underline">
+                      <Link href={buildSelectionHref(action.id) + "#action-detail"} className="block text-sm font-semibold text-slate-950 hover:underline">
                         {action.title}
                       </Link>
                       <div className="flex flex-wrap gap-2">

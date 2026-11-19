@@ -16,7 +16,7 @@ export default async function Workspace({ searchParams }: { searchParams: Promis
   const result = await listWorkspacePages({ ...filters, parentId: query ? undefined : null });
   return <div className="workspace-page">
     <header className="workspace-page-heading">
-      <div><h1 className="workspace-page-title">{query ? "Résultats de recherche" : "Documentation"}</h1>
+      <div><h1 className="workspace-page-title">{query ? "Résultats de recherche" : "Espace de travail"}</h1>
         <p className="mt-2 break-words text-sm text-slate-600">{query ? `Pages correspondant à « ${query} »` : "Retrouvez vos procédures, vos notes et vos vues de suivi."}</p>
       </div>
       {query && <Link className="workspace-panel-link" href="/workspace">Effacer la recherche</Link>}
@@ -33,7 +33,7 @@ export default async function Workspace({ searchParams }: { searchParams: Promis
             </span>
             <WorkspaceIcon name="right" className="h-4 w-4 text-slate-500" />
           </Link></li>)}
-        </ul> : <p className="py-8 text-sm text-slate-500">{query ? "Aucune page trouvée." : "Créez une page pour rassembler vos notes et votre suivi."}</p>}
+        </ul> : <p className="py-3 text-sm text-slate-600">{query ? "Aucune page trouvée." : "Créez une page pour rassembler vos notes et votre suivi."}</p>}
         {result.nextCursor && <Link className="button-secondary" href={`/workspace?${new URLSearchParams({ query, cursor: result.nextCursor })}`}>Pages suivantes</Link>}
       </section>
       {!query && <NewWorkspacePage />}

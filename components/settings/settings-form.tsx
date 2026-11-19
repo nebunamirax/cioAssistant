@@ -6,6 +6,8 @@ import type { AppSettings } from "@/lib/settings/schema";
 
 type SettingsFormProps = {
   initialSettings: AppSettings;
+  activeModel: string;
+  activeProvider: "openai" | "compatible" | "local";
 };
 
 function getStatusTone(status?: "success" | "warning" | "error") {
@@ -24,7 +26,10 @@ function getStatusTone(status?: "success" | "warning" | "error") {
   return "border-slate-200 bg-slate-50 text-slate-500";
 }
 
-export function SettingsForm({ initialSettings }: SettingsFormProps) {
+const providerLabels = { openai: "OpenAI", compatible: "API compatible OpenAI", local: "Moteur local" };
+const statusLabels = { success: "Réussi", warning: "À vérifier", error: "Échec" };
+
+export function SettingsForm({ initialSettings, activeModel, activeProvider }: SettingsFormProps) {
   const router = useRouter();
   const [settings, setSettings] = useState<AppSettings>({
     ...initialSettings,
@@ -35,6 +40,7 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
   });
   const [loading, setLoading] = useState(false);
   const [testingScope, setTestingScope] = useState<"ai" | "outlook" | "notion" | null>(null);
+  const [notice, setNotice] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [testResults, setTestResults] = useState<
     Partial<Record<
@@ -73,51 +79,130 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
     setLoading(true);
     setError(null);
 
-    const response = await fetch("/api/settings", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(settings)
-    });
-    const payload = await response.json();
-
-    if (!response.ok) {
-      setError(payload.error ?? "Impossible d'enregistrer les paramètres.");
+    setNotice("");
+    try {
+      const response = await fetch("/api/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(settings)
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        setError(payload.error ?? "Impossible d’enregistrer les paramètres.");
+        return;
+      }
+      setSettings(payload.data);
+      setNotice("Paramètres enregistrés.");
+      router.refresh();
+    } catch {
+      setError("Impossible de joindre le serveur. Réessayez.");
+    } finally {
       setLoading(false);
-      return;
     }
-
-    setSettings(payload.data);
-    setLoading(false);
-    router.refresh();
   };
 
   const runTest = async (scope: "ai" | "outlook" | "notion") => {
     setTestingScope(scope);
     setError(null);
 
-    const response = await fetch("/api/settings/test", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        scope,
-        settings
-      })
-    });
-    const payload = await response.json();
-
-    if (!response.ok) {
-      setError(payload.error ?? "Impossible de tester la configuration.");
+    try {
+      const response = await fetch("/api/settings/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ scope, settings })
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        setError(payload.error ?? "Impossible de tester la configuration.");
+        return;
+      }
+      setTestResults((current) => ({ ...current, [scope]: payload.data.results[0] }));
+    } catch {
+      setError("Impossible de joindre le serveur. Réessayez.");
+    } finally {
       setTestingScope(null);
-      return;
     }
-
-    const item = payload.data.results[0];
-    setTestResults((current) => ({
-      ...current,
-      [scope]: item
-    }));
-    setTestingScope(null);
   };
+
+  const openAIFields = (
+    <div className="form-section space-y-3">
+      <h3 className="form-section-title">OpenAI</h3>
+      <div className="grid gap-3 md:grid-cols-2">
+        <label className="md:col-span-2">
+          <span className="field-label">Clé API</span>
+          <input
+            type="password"
+            value={settings.ai.openAIApiKey}
+            onChange={(event) => updateAIField("openAIApiKey", event.target.value)}
+            className="field-input"
+            placeholder="sk-..."
+          />
+        </label>
+        <label>
+          <span className="field-label">Modèle actif</span>
+          <input
+            value={settings.ai.openAIModel}
+            onChange={(event) => updateAIField("openAIModel", event.target.value)}
+            className="field-input"
+            placeholder="gpt-4.1"
+          />
+        </label>
+        <label>
+          <span className="field-label">Catalogue de modèles</span>
+          <input
+            value={settings.ai.openAIModels}
+            onChange={(event) => updateAIField("openAIModels", event.target.value)}
+            className="field-input"
+            placeholder="gpt-4.1,gpt-4.1-mini"
+          />
+        </label>
+      </div>
+    </div>
+  );
+  const compatibleFields = (
+    <div className="form-section space-y-3">
+      <h3 className="form-section-title">API compatible OpenAI</h3>
+      <div className="grid gap-3 md:grid-cols-2">
+        <label className="md:col-span-2">
+          <span className="field-label">Adresse de l’API</span>
+          <input
+            value={settings.ai.compatibleBaseUrl}
+            onChange={(event) => updateAIField("compatibleBaseUrl", event.target.value)}
+            className="field-input"
+            placeholder="http://host.docker.internal:11434/v1"
+          />
+        </label>
+        <label className="md:col-span-2">
+          <span className="field-label">Clé API</span>
+          <input
+            type="password"
+            value={settings.ai.compatibleApiKey}
+            onChange={(event) => updateAIField("compatibleApiKey", event.target.value)}
+            className="field-input"
+            placeholder="optionnel"
+          />
+        </label>
+        <label>
+          <span className="field-label">Modèle actif</span>
+          <input
+            value={settings.ai.compatibleModel}
+            onChange={(event) => updateAIField("compatibleModel", event.target.value)}
+            className="field-input"
+            placeholder="llama3.1:8b"
+          />
+        </label>
+        <label>
+          <span className="field-label">Catalogue de modèles</span>
+          <input
+            value={settings.ai.compatibleModels}
+            onChange={(event) => updateAIField("compatibleModels", event.target.value)}
+            className="field-input"
+            placeholder="llama3.1:8b,qwen2.5:14b"
+          />
+        </label>
+      </div>
+    </div>
+  );
 
   return (
     <form onSubmit={submit} className="space-y-5">
@@ -125,11 +210,11 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="panel-title">IA</h2>
-            <p className="panel-caption">Choisis le provider actif et modifie directement les modèles ou clés utilisés par l’application.</p>
+            <p className="panel-caption">Fournisseur utilisé : {providerLabels[activeProvider]}{activeModel ? ` · ${activeModel}` : ""}</p>
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2">
             <span className={`rounded-full border px-3 py-1 text-xs font-medium ${getStatusTone(testResults.ai?.status)}`}>
-              {testResults.ai ? `${testResults.ai.status}: ${testResults.ai.title}` : "Non testé"}
+              {testResults.ai ? `${statusLabels[testResults.ai.status]} · ${testResults.ai.title}` : "Non testé"}
             </span>
             <button
               type="button"
@@ -144,92 +229,23 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
 
         <div className="grid gap-3 md:grid-cols-2">
           <label>
-            <span className="field-label">Provider actif</span>
+            <span className="field-label">Fournisseur à enregistrer</span>
             <select
               value={settings.ai.providerMode}
               onChange={(event) => updateAIField("providerMode", event.target.value)}
               className="field-select"
             >
               <option value="openai">OpenAI</option>
-              <option value="compatible">OpenAI-compatible</option>
+              <option value="compatible">API compatible OpenAI</option>
             </select>
           </label>
         </div>
 
-        <div className="form-section space-y-3">
-          <h3 className="form-section-title">OpenAI</h3>
-          <div className="grid gap-3 md:grid-cols-2">
-            <label className="md:col-span-2">
-              <span className="field-label">API key</span>
-              <input
-                value={settings.ai.openAIApiKey}
-                onChange={(event) => updateAIField("openAIApiKey", event.target.value)}
-                className="field-input"
-                placeholder="sk-..."
-              />
-            </label>
-            <label>
-              <span className="field-label">Modèle actif</span>
-              <input
-                value={settings.ai.openAIModel}
-                onChange={(event) => updateAIField("openAIModel", event.target.value)}
-                className="field-input"
-                placeholder="gpt-4.1"
-              />
-            </label>
-            <label>
-              <span className="field-label">Catalogue modèles</span>
-              <input
-                value={settings.ai.openAIModels}
-                onChange={(event) => updateAIField("openAIModels", event.target.value)}
-                className="field-input"
-                placeholder="gpt-4.1,gpt-4.1-mini"
-              />
-            </label>
-          </div>
-        </div>
-
-        <div className="form-section space-y-3">
-          <h3 className="form-section-title">OpenAI-compatible</h3>
-          <div className="grid gap-3 md:grid-cols-2">
-            <label className="md:col-span-2">
-              <span className="field-label">Base URL</span>
-              <input
-                value={settings.ai.compatibleBaseUrl}
-                onChange={(event) => updateAIField("compatibleBaseUrl", event.target.value)}
-                className="field-input"
-                placeholder="http://host.docker.internal:11434/v1"
-              />
-            </label>
-            <label className="md:col-span-2">
-              <span className="field-label">API key</span>
-              <input
-                value={settings.ai.compatibleApiKey}
-                onChange={(event) => updateAIField("compatibleApiKey", event.target.value)}
-                className="field-input"
-                placeholder="optionnel"
-              />
-            </label>
-            <label>
-              <span className="field-label">Modèle actif</span>
-              <input
-                value={settings.ai.compatibleModel}
-                onChange={(event) => updateAIField("compatibleModel", event.target.value)}
-                className="field-input"
-                placeholder="llama3.1:8b"
-              />
-            </label>
-            <label>
-              <span className="field-label">Catalogue modèles</span>
-              <input
-                value={settings.ai.compatibleModels}
-                onChange={(event) => updateAIField("compatibleModels", event.target.value)}
-                className="field-input"
-                placeholder="llama3.1:8b,qwen2.5:14b"
-              />
-            </label>
-          </div>
-        </div>
+        {settings.ai.providerMode === "openai" ? openAIFields : compatibleFields}
+        <details className="rounded-lg border border-slate-200 px-3 py-2 text-sm">
+          <summary className="cursor-pointer font-semibold">Autre fournisseur</summary>
+          <div className="mt-3">{settings.ai.providerMode === "openai" ? compatibleFields : openAIFields}</div>
+        </details>
 
         {testResults.ai ? (
           <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-3">
@@ -247,15 +263,14 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
 
       <section className="workbench-panel space-y-4">
         <div>
-          <h2 className="panel-title">Intégrations</h2>
-          <p className="panel-caption">Même menu, mêmes règles: Outlook et Notion se configurent ici.</p>
+          <h2 className="panel-title">Configuration Outlook et Notion</h2>
         </div>
 
         <div id="outlook-settings" className="form-section space-y-3">
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h3 className="form-section-title">Outlook</h3>
-              <p className="form-section-caption">Prépare la connexion Microsoft Graph. La callback OAuth est calculee automatiquement sur `/api/integrations/outlook/callback`.</p>
+              <p className="form-section-caption">Connexion à la boîte Microsoft 365.</p>
             </div>
             <div className="flex flex-wrap items-center justify-end gap-2">
               <label className="flex items-center gap-2 text-sm text-slate-700">
@@ -267,7 +282,7 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
                 Activé
               </label>
               <span className={`rounded-full border px-3 py-1 text-xs font-medium ${getStatusTone(testResults.outlook?.status)}`}>
-                {testResults.outlook ? `${testResults.outlook.status}: ${testResults.outlook.title}` : "Non testé"}
+                {testResults.outlook ? `${statusLabels[testResults.outlook.status]} · ${testResults.outlook.title}` : "Non testé"}
               </span>
               <button
                 type="button"
@@ -281,7 +296,7 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
           </div>
           <div className="grid gap-3 md:grid-cols-2">
             <label>
-              <span className="field-label">Tenant ID</span>
+              <span className="field-label">Identifiant du tenant</span>
               <input
                 value={settings.integrations.outlookTenantId}
                 onChange={(event) => updateIntegrationField("outlookTenantId", event.target.value)}
@@ -289,7 +304,7 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
               />
             </label>
             <label>
-              <span className="field-label">Client ID</span>
+              <span className="field-label">Identifiant client</span>
               <input
                 value={settings.integrations.outlookClientId}
                 onChange={(event) => updateIntegrationField("outlookClientId", event.target.value)}
@@ -297,7 +312,7 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
               />
             </label>
             <label className="md:col-span-2">
-              <span className="field-label">Client secret</span>
+              <span className="field-label">Secret client</span>
               <input
                 value={settings.integrations.outlookClientSecret}
                 onChange={(event) => updateIntegrationField("outlookClientSecret", event.target.value)}
@@ -308,49 +323,54 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
             </label>
           </div>
           <p className="text-xs text-slate-500">
-            Une fois les champs enregistres, lance la connexion depuis le module `Emails`.
+            Après enregistrement, connectez la boîte depuis le module E-mails.
           </p>
-          <div className="grid gap-3 md:grid-cols-2">
-            <label className="flex items-center gap-2 text-sm text-slate-700">
-              <input
-                type="checkbox"
-                checked={settings.integrations.outlookPollingEnabled}
-                onChange={(event) => updateIntegrationField("outlookPollingEnabled", event.target.checked)}
-              />
-              Polling actif
-            </label>
-            <label>
-              <span className="field-label">Intervalle de lecture</span>
-              <input
-                value={String(settings.integrations.outlookPollingIntervalMinutes)}
-                onChange={(event) => updateIntegrationField("outlookPollingIntervalMinutes", event.target.value)}
-                className="field-input"
-                type="number"
-                min={1}
-                max={1440}
-              />
-            </label>
-            <label className="flex items-center gap-2 text-sm text-slate-700">
-              <input
-                type="checkbox"
-                checked={settings.integrations.outlookAutomationEnabled}
-                onChange={(event) => updateIntegrationField("outlookAutomationEnabled", event.target.checked)}
-              />
-              Extraction auto active
-            </label>
-            <label>
-              <span className="field-label">Categorie(s) Outlook</span>
-              <input
-                value={settings.integrations.outlookAutomationCategory}
-                onChange={(event) => updateIntegrationField("outlookAutomationCategory", event.target.value)}
-                className="field-input"
-                placeholder="assistant,prioritaire"
-              />
-            </label>
-          </div>
-          <p className="text-xs text-slate-500">
-            L&apos;automatisation traite les emails dont la categorie Outlook correspond, puis cree des objets metier ou envoie en revue IA.
-          </p>
+          <details>
+            <summary className="cursor-pointer text-sm font-semibold">Synchronisation et automatisation</summary>
+            <div className="mt-3 space-y-3">
+              <div className="grid gap-3 md:grid-cols-2">
+                <label className="flex items-center gap-2 text-sm text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={settings.integrations.outlookPollingEnabled}
+                    onChange={(event) => updateIntegrationField("outlookPollingEnabled", event.target.checked)}
+                  />
+                  Synchronisation périodique
+                </label>
+                <label>
+                  <span className="field-label">Intervalle de lecture</span>
+                  <input
+                    value={String(settings.integrations.outlookPollingIntervalMinutes)}
+                    onChange={(event) => updateIntegrationField("outlookPollingIntervalMinutes", event.target.value)}
+                    className="field-input"
+                    type="number"
+                    min={1}
+                    max={1440}
+                  />
+                </label>
+                <label className="flex items-center gap-2 text-sm text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={settings.integrations.outlookAutomationEnabled}
+                    onChange={(event) => updateIntegrationField("outlookAutomationEnabled", event.target.checked)}
+                  />
+                  Extraction automatique
+                </label>
+                <label>
+                  <span className="field-label">Catégories Outlook</span>
+                  <input
+                    value={settings.integrations.outlookAutomationCategory}
+                    onChange={(event) => updateIntegrationField("outlookAutomationCategory", event.target.value)}
+                    className="field-input"
+                    placeholder="assistant,prioritaire"
+                  />
+                </label>
+              </div>
+              <p className="text-xs text-slate-500">
+                Les e-mails correspondant aux catégories choisies sont traités automatiquement.
+              </p>
+            </div>
+          </details>
           {testResults.outlook ? (
             <div className="rounded-2xl border border-slate-200 bg-white p-3">
               <p className="text-sm font-semibold text-slate-950">{testResults.outlook.message}</p>
@@ -366,7 +386,7 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
         </div>
 
         <div className="form-section space-y-3">
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h3 className="form-section-title">Notion</h3>
               <p className="form-section-caption">Prépare la connexion et la base de travail Notion.</p>
@@ -381,7 +401,7 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
                 Activé
               </label>
               <span className={`rounded-full border px-3 py-1 text-xs font-medium ${getStatusTone(testResults.notion?.status)}`}>
-                {testResults.notion ? `${testResults.notion.status}: ${testResults.notion.title}` : "Non testé"}
+                {testResults.notion ? `${statusLabels[testResults.notion.status]} · ${testResults.notion.title}` : "Non testé"}
               </span>
               <button
                 type="button"
@@ -395,15 +415,16 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
           </div>
           <div className="grid gap-3 md:grid-cols-2">
             <label>
-              <span className="field-label">API key</span>
+              <span className="field-label">Clé API</span>
               <input
+                type="password"
                 value={settings.integrations.notionApiKey}
                 onChange={(event) => updateIntegrationField("notionApiKey", event.target.value)}
                 className="field-input"
               />
             </label>
             <label>
-              <span className="field-label">Database ID</span>
+              <span className="field-label">Identifiant de la base</span>
               <input
                 value={settings.integrations.notionDatabaseId}
                 onChange={(event) => updateIntegrationField("notionDatabaseId", event.target.value)}
@@ -426,9 +447,10 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
         </div>
       </section>
 
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+      {error ? <p role="alert" className="text-sm text-red-600">{error}</p> : null}
 
-      <div className="flex justify-end gap-3">
+      <div className="flex flex-wrap items-center justify-end gap-3">
+        <p role="status" className="text-sm text-emerald-700">{notice}</p>
         <button disabled={loading} className="button-primary">
           {loading ? "Enregistrement..." : "Enregistrer les paramètres"}
         </button>
